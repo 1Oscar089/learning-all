@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tablas de Aprendizaje</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-wrapper">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-inner">
+        <div class="brand">
+          <span class="brand-emoji">📚</span>
+          <div>
+            <h1>Tablas de Aprendizaje</h1>
+            <p class="subtitle">Crea temas, organiza tablas y aprende lo que quieras.</p>
+          </div>
+        </div>
+        <button id="btnNewTheme" class="btn btn-primary">
+          <span>+</span> Nuevo tema
+        </button>
+      </div>
+    </header>
+
+    <!-- Main -->
+    <main class="app-main">
+      <!-- Vista de temas -->
+      <section id="viewThemes" class="view active">
+        <div id="emptyState" class="empty-state">
+          <div class="empty-emoji">🗂️</div>
+          <h2>Aún no hay temas</h2>
+          <p>Crea tu primer tema para empezar a organizar tus tablas de aprendizaje.</p>
+          <button class="btn btn-primary" onclick="document.getElementById('btnNewTheme').click()">Crear primer tema</button>
+        </div>
+        <div id="themesGrid" class="themes-grid"></div>
+      </section>
+
+      <!-- Vista de un tema -->
+      <section id="viewTheme" class="view">
+        <button class="btn btn-ghost back-btn" onclick="showThemes()">← Volver a temas</button>
+        <div class="theme-header">
+          <span id="themeEmoji" class="theme-emoji">📖</span>
+          <h2 id="themeName">Tema</h2>
+        </div>
+        <div class="tables-section">
+          <div class="tables-section-head">
+            <h3>Tablas</h3>
+            <button id="btnNewTable" class="btn btn-primary">+ Nueva tabla</button>
+          </div>
+          <div id="tablesContainer" class="tables-container"></div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <p>Tablas de Aprendizaje · VanillaJS + Google Sheets (Apps Script)</p>
+    </footer>
+  </div>
+
+  <!-- Modal: Crear tema -->
+  <div id="modalTheme" class="modal-overlay" hidden>
+    <div class="modal">
+      <div class="modal-head">
+        <h3>Nuevo tema</h3>
+        <button class="modal-close" onclick="closeModal('modalTheme')">×</button>
+      </div>
+      <div class="modal-body">
+        <label class="field">
+          <span>Emoji</span>
+          <input type="text" id="themeEmojiInput" maxlength="4" placeholder="📖" />
+        </label>
+        <label class="field">
+          <span>Nombre del tema</span>
+          <input type="text" id="themeNameInput" placeholder="Ej: Vocabulario en inglés" />
+        </label>
+        <p class="hint">El emoji es opcional. Si lo dejas vacío, usaremos 📖.</p>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-ghost" onclick="closeModal('modalTheme')">Cancelar</button>
+        <button class="btn btn-primary" onclick="createTheme()">Crear tema</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Crear tabla -->
+  <div id="modalTable" class="modal-overlay" hidden>
+    <div class="modal">
+      <div class="modal-head">
+        <h3>Nueva tabla</h3>
+        <button class="modal-close" onclick="closeModal('modalTable')">×</button>
+      </div>
+      <div class="modal-body">
+        <label class="field">
+          <span>Título de la tabla</span>
+          <input type="text" id="tableTitleInput" placeholder="Ej: Verbos irregulares" />
+        </label>
+        <label class="field">
+          <span>Número de columnas</span>
+          <input type="number" id="tableColsInput" min="1" max="10" value="3" />
+        </label>
+        <div class="field">
+          <span>Encabezados (headers)</span>
+          <div id="headersList" class="headers-list"></div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-ghost" onclick="closeModal('modalTable')">Cancelar</button>
+        <button class="btn btn-primary" onclick="createTable()">Crear tabla</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Confirmación genérica -->
+  <div id="modalConfirm" class="modal-overlay" hidden>
+    <div class="modal modal-sm">
+      <div class="modal-head">
+        <h3 id="confirmTitle">Confirmar</h3>
+      </div>
+      <div class="modal-body">
+        <p id="confirmMessage">¿Estás seguro?</p>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-ghost" onclick="closeModal('modalConfirm')">Cancelar</button>
+        <button class="btn btn-danger" id="confirmAccept">Aceptar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast" hidden></div>
+
+  <!-- Loading overlay -->
+  <div id="loading" class="loading" hidden>
+    <div class="spinner"></div>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
