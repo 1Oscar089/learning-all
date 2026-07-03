@@ -16,4 +16,5 @@ const CONFIG = {
   // Token simple para evitar que cualquiera use tu endpoint.
   // Debe coincidir con el TOKEN del Code.gs.
   TOKEN: "abababacacaca_2026",
+   //
 };
