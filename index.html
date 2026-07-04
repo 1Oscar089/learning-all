@@ -7,6 +7,8 @@
   <link rel="stylesheet" href="styles.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Icons -->
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
 </head>
 <body>
   <div class="app-wrapper">
@@ -20,9 +22,14 @@
             <p class="subtitle">Crea temas, organiza tablas y aprende lo que quieras.</p>
           </div>
         </div>
-        <button id="btnNewTheme" class="btn btn-primary">
-          <span>+</span> Nuevo tema
-        </button>
+        <div class="header-actions">
+          <button id="btnToggleKeyboard" class="btn btn-ghost" title="Mostrar/Ocultar Teclado Virtual">
+            <span class="material-icons-round">keyboard</span>
+          </button>
+          <button id="btnNewTheme" class="btn btn-primary">
+            <span class="material-icons-round">add</span> Nuevo tema
+          </button>
+        </div>
       </div>
     </header>
 
@@ -41,28 +48,44 @@
 
       <!-- Vista de un tema -->
       <section id="viewTheme" class="view">
-        <button class="btn btn-ghost back-btn" onclick="showThemes()">← Volver a temas</button>
+        <button class="btn btn-ghost back-btn" onclick="showThemes()">
+          <span class="material-icons-round">arrow_back</span> Volver a temas
+        </button>
         <div class="theme-header">
           <span id="themeEmoji" class="theme-emoji">📖</span>
           <h2 id="themeName">Tema</h2>
         </div>
         <div class="tables-section">
           <div class="tables-section-head">
-            <h3>Tablas</h3>
-            <button id="btnNewTable" class="btn btn-primary">+ Nueva tabla</button>
+            <h3>Tus Tablas</h3>
+            <button id="btnNewTable" class="btn btn-primary">
+              <span class="material-icons-round">add_circle</span> Nueva tabla
+            </button>
           </div>
           <div id="tablesContainer" class="tables-container"></div>
         </div>
       </section>
     </main>
-
-    <!-- Footer -->
-    <footer class="app-footer">
-      <p>Tablas de Aprendizaje · VanillaJS + Google Sheets (Apps Script)</p>
-    </footer>
   </div>
 
-  <!-- Modal: Crear tema -->
+  <!-- Teclado Virtual -->
+  <div id="virtualKeyboard" class="virtual-keyboard hidden">
+    <div class="vk-header">
+      <span class="vk-title"><span class="material-icons-round" style="font-size: 18px;">language</span> Teclado de Símbolos</span>
+      <select id="vkLayoutSelect" class="vk-select">
+        <option value="math">Matemáticas</option>
+        <option value="greek">Griego</option>
+        <option value="ipa">IPA (Fonética)</option>
+        <option value="cyrillic">Cirílico (Ruso básico)</option>
+        <option value="accents">Acentos Especiales</option>
+      </select>
+      <div class="vk-drag-handle material-icons-round" title="Mover">drag_indicator</div>
+      <button class="vk-close material-icons-round" onclick="toggleVirtualKeyboard()">close</button>
+    </div>
+    <div id="vkKeysContainer" class="vk-keys"></div>
+  </div>
+
+  <!-- Modales y Toasts -->
   <div id="modalTheme" class="modal-overlay" hidden>
     <div class="modal">
       <div class="modal-head">
@@ -78,7 +101,7 @@
           <span>Nombre del tema</span>
           <input type="text" id="themeNameInput" placeholder="Ej: Vocabulario en inglés" />
         </label>
-        <p class="hint">El emoji es opcional. Si lo dejas vacío, usaremos 📖.</p>
+        <p class="hint">El emoji es opcional.</p>
       </div>
       <div class="modal-foot">
         <button class="btn btn-ghost" onclick="closeModal('modalTheme')">Cancelar</button>
@@ -87,22 +110,23 @@
     </div>
   </div>
 
-  <!-- Modal: Crear tabla -->
   <div id="modalTable" class="modal-overlay" hidden>
-    <div class="modal">
+    <div class="modal modal-lg">
       <div class="modal-head">
         <h3>Nueva tabla</h3>
         <button class="modal-close" onclick="closeModal('modalTable')">×</button>
       </div>
       <div class="modal-body">
-        <label class="field">
-          <span>Título de la tabla</span>
-          <input type="text" id="tableTitleInput" placeholder="Ej: Verbos irregulares" />
-        </label>
-        <label class="field">
-          <span>Número de columnas</span>
-          <input type="number" id="tableColsInput" min="1" max="10" value="3" />
-        </label>
+        <div class="form-grid">
+          <label class="field">
+            <span>Título de la tabla</span>
+            <input type="text" id="tableTitleInput" placeholder="Ej: Verbos irregulares" />
+          </label>
+          <label class="field">
+            <span>Número de columnas</span>
+            <input type="number" id="tableColsInput" min="1" max="10" value="3" />
+          </label>
+        </div>
         <div class="field">
           <span>Encabezados (headers)</span>
           <div id="headersList" class="headers-list"></div>
@@ -115,7 +139,6 @@
     </div>
   </div>
 
-  <!-- Modal: Confirmación genérica -->
   <div id="modalConfirm" class="modal-overlay" hidden>
     <div class="modal modal-sm">
       <div class="modal-head">
@@ -131,13 +154,8 @@
     </div>
   </div>
 
-  <!-- Toast -->
   <div id="toast" class="toast" hidden></div>
-
-  <!-- Loading overlay -->
-  <div id="loading" class="loading" hidden>
-    <div class="spinner"></div>
-  </div>
+  <div id="loading" class="loading" hidden><div class="spinner"></div></div>
 
   <script src="config.js"></script>
   <script src="app.js"></script>
