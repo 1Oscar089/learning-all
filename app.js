@@ -68,14 +68,25 @@ async function apiCall(action, payload = {}, method = "POST") {
   if (state.demoMode) {
     return demoCall(action, payload);
   }
-  const url = CONFIG.APPS_SCRIPT_URL;
-  const body = JSON.stringify({ action, token: CONFIG.TOKEN, ...payload });
-
-  const res = await fetch(url, {
+  
+  let url = CONFIG.APPS_SCRIPT_URL;
+  const dataPayload = { action, token: CONFIG.TOKEN, ...payload };
+  
+  const options = {
     method,
-    headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: method === "GET" ? undefined : body,
-  });
+    headers: { "Content-Type": "text/plain;charset=utf-8" }
+  };
+
+  if (method === "GET") {
+    // Si es GET, enviamos los datos en la URL
+    const params = new URLSearchParams(dataPayload).toString();
+    url += `?${params}`;
+  } else {
+    // Si es POST, enviamos los datos en el body
+    options.body = JSON.stringify(dataPayload);
+  }
+
+  const res = await fetch(url, options);
   const data = await res.json();
   if (!data.ok) throw new Error(data.error || "Error desconocido");
   return data;
