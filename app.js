@@ -1,12 +1,15 @@
 /* =========================================================
-   Tablas de Aprendizaje — Lógica Principal Mejorada
+   Tablas de Aprendizaje — Lógica Avanzada Completa
    ========================================================= */
 let state = {
   themes: [],
   currentTheme: null,
   tables: [],
   demoMode: !CONFIG.APPS_SCRIPT_URL,
-  lastFocusedInput: null // Para el teclado virtual
+  lastFocusedInput: null,
+  savedRowsStatus: {}, // Guarda el estado bloqueado/desbloqueado: { "tableId_rowIndex": true/false }
+  currentVKLayout: 'japanese_hiragana',
+  vkSearchQuery: ''
 };
 
 const $ = (sel) => document.querySelector(sel);
@@ -20,7 +23,7 @@ function toast(msg, type = "info") {
   t.className = "toast " + type;
   t.hidden = false;
   clearTimeout(t._timer);
-  t._timer = setTimeout(() => (t.hidden = true), 3000);
+  t._timer = setTimeout(() => (t.hidden = true), 2500);
 }
 
 function openModal(id) { $("#" + id).hidden = false; }
@@ -41,7 +44,7 @@ function escapeHtml(str) {
   return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
-/* API Calls (Mismo que antes con fix de GET) */
+/* API Engine */
 async function apiCall(action, payload = {}, method = "POST") {
   if (state.demoMode) return demoCall(action, payload);
   let url = CONFIG.APPS_SCRIPT_URL;
@@ -61,8 +64,9 @@ async function apiCall(action, payload = {}, method = "POST") {
   return data;
 }
 
+/* LocalStorage Fallback for Demo Mode */
 async function demoCall(action, payload) {
-  await new Promise((r) => setTimeout(r, 300));
+  await new Promise((r) => setTimeout(r, 150));
   const db = JSON.parse(localStorage.getItem("studyTablesDemo") || "{}");
   db.themes = db.themes || []; db.tables = db.tables || {};
   const save = (d) => localStorage.setItem("studyTablesDemo", JSON.stringify(d));
@@ -108,7 +112,7 @@ async function demoCall(action, payload) {
   }
 }
 
-/* UI Logic */
+/* Temas core */
 async function loadThemes() {
   showLoading(true);
   try {
@@ -130,7 +134,7 @@ function renderThemes() {
     .sort((a,b) => a.name.localeCompare(b.name, "es", {sensitivity:"base"}))
     .map(t => `
       <div class="theme-card" onclick="openTheme('${t.id}','${escapeHtml(t.name)}','${escapeHtml(t.emoji)}')">
-        <button class="delete-btn" title="Eliminar" onclick="event.stopPropagation(); deleteTheme('${t.id}','${escapeHtml(t.name)}')"><span class="material-icons-round">delete</span></button>
+        <button class="delete-btn" title="Eliminar Tema" onclick="event.stopPropagation(); deleteTheme('${t.id}','${escapeHtml(t.name)}')"><span class="material-icons-round">delete</span></button>
         <div class="emoji">${escapeHtml(t.emoji || "📖")}</div>
         <div class="name">${escapeHtml(t.name)}</div>
       </div>
@@ -152,6 +156,7 @@ function showThemes() {
   state.currentTheme = null;
 }
 
+/* Tablas core */
 async function loadTables() {
   if (!state.currentTheme) return;
   showLoading(true);
@@ -166,7 +171,7 @@ async function loadTables() {
 function renderTables() {
   const container = $("#tablesContainer");
   if (state.tables.length === 0) {
-    container.innerHTML = `<div class="empty-state" style="padding:3rem 1rem;"><h2>Aún no hay tablas aquí</h2><p>Crea tu primera tabla para organizar tus datos.</p></div>`;
+    container.innerHTML = `<div class="empty-state" style="padding:2.5rem 1rem;"><h2>No hay tablas en este tema</h2><p>Crea una tabla con las columnas que necesites.</p></div>`;
     return;
   }
   container.innerHTML = [...state.tables]
@@ -178,6 +183,7 @@ function renderTables() {
 function renderTableCard(t) {
   const headers = t.headers || [];
   const rows = t.rows || [];
+  
   const headersHtml = headers.map((h, i) => `
     <th>
       <div class="col-head">
@@ -189,18 +195,39 @@ function renderTableCard(t) {
         </span>
       </div>
     </th>
-  `).join("") + `<th></th>`; // Extra column for row delete buttons
+  `).join("") + `<th style="width:100px; text-align:center;">Acción</th>`;
 
-  const bodyRows = rows.map((row, rIdx) => `
-    <tr>
-      ${headers.map((_, cIdx) => `
-        <td><textarea class="cell-input track-focus" rows="1" data-tbl="${t.id}" data-row="${rIdx}" data-col="${cIdx}" oninput="autoGrow(this)">${escapeHtml(row[cIdx] || "")}</textarea></td>
-      `).join("")}
-      <td class="row-actions-td">
-        <button class="del-row-btn material-icons-round" title="Eliminar fila" onclick="deleteRow('${t.id}', ${rIdx})">remove_circle_outline</button>
+  const bodyRows = rows.map((row, rIdx) => {
+    const rowKey = `${t.id}_${rIdx}`;
+    // Si no está definido, por defecto las celdas viejas con contenido se asumen guardadas, las nuevas libres.
+    if (state.savedRowsStatus[rowKey] === undefined) {
+      const hasContent = row.some(c => c && c.trim() !== "");
+      state.savedRowsStatus[rowKey] = hasContent; 
+    }
+    const isSaved = state.savedRowsStatus[rowKey];
+
+    const cellsHtml = headers.map((_, cIdx) => `
+      <td>
+        <textarea class="cell-input track-focus" rows="1" 
+          data-tbl="${t.id}" data-row="${rIdx}" data-col="${cIdx}" 
+          oninput="autoGrow(this)" ${isSaved ? 'disabled' : ''}>${escapeHtml(row[cIdx] || "")}</textarea>
       </td>
-    </tr>
-  `).join("");
+    `).join("");
+
+    const actionButton = isSaved 
+      ? `<button class="row-action-btn btn-row-edit material-icons-round" title="Editar Fila" onclick="toggleRowEdit('${t.id}', ${rIdx}, false)">edit</button>`
+      : `<button class="row-action-btn btn-row-save material-icons-round" title="Guardar Fila" onclick="toggleRowEdit('${t.id}', ${rIdx}, true)">save</button>`;
+
+    return `
+      <tr class="${isSaved ? 'row-saved' : 'row-editing'}" data-row-index="${rIdx}">
+        ${cellsHtml}
+        <td class="row-actions-td">
+          ${actionButton}
+          <button class="row-action-btn btn-row-delete material-icons-round" title="Eliminar fila" onclick="deleteRow('${t.id}', ${rIdx})">delete</button>
+        </td>
+      </tr>
+    `;
+  }).join("");
 
   return `
     <div class="table-card" data-tbl="${t.id}">
@@ -208,8 +235,8 @@ function renderTableCard(t) {
         <div class="title"><span class="material-icons-round" style="color:var(--primary)">table_chart</span> ${escapeHtml(t.title)}</div>
         <div class="table-card-actions">
           <button class="btn btn-ghost btn-sm" onclick="appendColumn('${t.id}')"><span class="material-icons-round">view_column</span> + Columna</button>
-          <button class="btn btn-ghost btn-sm" onclick="addRow('${t.id}')"><span class="material-icons-round">table_rows</span> + Fila</button>
-          <button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="deleteTable('${t.id}', '${escapeHtml(t.title)}')"><span class="material-icons-round">delete</span></button>
+          <button class="btn btn-ghost btn-sm" onclick="addRow('${t.id}')"><span class="material-icons-round">table_rows</span> + Fila de Datos</button>
+          <button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="deleteTable('${t.id}', '${escapeHtml(t.title)}')"><span class="material-icons-round">delete_forever</span> Borrar Tabla</button>
         </div>
       </div>
       <div class="table-scroll">
@@ -219,27 +246,71 @@ function renderTableCard(t) {
         </table>
       </div>
       <div class="table-footer">
-        <span>${rows.length} filas, ${headers.length} columnas</span>
+        <span>Estadísticas: ${rows.length} filas creadas • ${headers.length} columnas</span>
       </div>
     </div>
   `;
 }
 
-function autoGrow(el) { el.style.height = "auto"; el.style.height = el.scrollHeight + "px"; }
+function autoGrow(el) { 
+  el.style.height = "auto"; 
+  el.style.height = el.scrollHeight + "px"; 
+}
 
 function attachCellListeners() {
   $$(".cell-input").forEach(el => {
     autoGrow(el);
     el.addEventListener("blur", async () => {
-      const { tbl, row, col } = el.dataset;
-      await updateCell(tbl, +row, +col, el.value);
+      // Guarda en segundo plano de manera reactiva al salir si no está deshabilitado
+      if (!el.disabled) {
+        const { tbl, row, col } = el.dataset;
+        await updateCell(tbl, +row, +col, el.value);
+      }
     });
-    // Track focus for virtual keyboard
-    el.addEventListener("focus", () => state.lastFocusedInput = el);
+    el.addEventListener("focus", () => {
+      if(!el.disabled) state.lastFocusedInput = el;
+    });
   });
 }
 
-// ... Funciones de Crear/Borrar son iguales a la logica previa pero adaptadas
+/* Guardar / Editar Filas de manera explícita */
+async function toggleRowEdit(tableId, rowIndex, shouldSave) {
+  const rowKey = `${tableId}_${rowIndex}`;
+  
+  if (shouldSave) {
+    // Si le dio a Guardar, recolectamos los valores actuales de las celdas de esa fila y los aseguramos
+    showLoading(true);
+    try {
+      const inputs = Array.from($$(`.cell-input[data-tbl="${tableId}"][data-row="${rowIndex}"]`));
+      for (let input of inputs) {
+        const colIdx = +input.dataset.col;
+        await updateCell(tableId, rowIndex, colIdx, input.value);
+      }
+      state.savedRowsStatus[rowKey] = true;
+      toast("Fila guardada y bloqueada", "success");
+    } catch(e) {
+      toast("Error al guardar fila", "error");
+    } finally {
+      showLoading(false);
+    }
+  } else {
+    // Si le dio a Editar, desbloqueamos el estado de esa fila
+    state.savedRowsStatus[rowKey] = false;
+  }
+  
+  // Volver a renderizar las tablas para refrescar los estados visuales (disabled / botones)
+  renderTables();
+  
+  // Si fue una acción de edición, poner foco en la primera celda automáticamente
+  if (!shouldSave) {
+    setTimeout(() => {
+      const dynamicInput = $(`.cell-input[data-tbl="${tableId}"][data-row="${rowIndex}"]`);
+      if (dynamicInput) { dynamicInput.focus(); }
+    }, 50);
+  }
+}
+
+/* Acciones Temas Modales */
 function setupThemeModal() {
   $("#btnNewTheme").addEventListener("click", () => {
     $("#themeEmojiInput").value = ""; $("#themeNameInput").value = ""; openModal("modalTheme");
@@ -249,34 +320,40 @@ function setupThemeModal() {
 async function createTheme() {
   const name = $("#themeNameInput").value.trim();
   const emoji = $("#themeEmojiInput").value.trim() || "📖";
-  if (!name) return toast("Escribe un nombre", "error");
+  if (!name) return toast("Escribe un nombre para el tema", "error");
   showLoading(true);
   try {
     const data = await apiCall("createTheme", { name, emoji });
-    state.themes.push(data.theme); closeModal("modalTheme"); renderThemes(); toast("Tema creado", "success");
+    state.themes.push(data.theme); closeModal("modalTheme"); renderThemes(); toast("Tema creado con éxito", "success");
   } catch (e) { toast("Error: " + e.message, "error"); } finally { showLoading(false); }
 }
 function deleteTheme(id, name) {
-  confirmAction("Eliminar tema", `¿Eliminar "${name}" y sus tablas?`, async () => {
+  confirmAction("Eliminar tema permanente", `¿Deseas eliminar el tema "${name}"? Se borrarán todas las tablas asociadas en la nube.`, async () => {
     showLoading(true);
     try {
       await apiCall("deleteTheme", { themeId: id });
-      state.themes = state.themes.filter(t => t.id !== id); renderThemes(); toast("Eliminado", "success");
+      state.themes = state.themes.filter(t => t.id !== id); renderThemes(); toast("Tema eliminado", "success");
     } catch(e){ toast("Error", "error"); } finally { showLoading(false); }
   });
 }
 
+/* Acciones Tablas Modales */
 function setupTableModal() {
   $("#btnNewTable").addEventListener("click", () => {
     $("#tableTitleInput").value = ""; $("#tableColsInput").value = 3; renderHeaderInputs(3); openModal("modalTable");
   });
-  $("#tableColsInput").addEventListener("input", (e) => renderHeaderInputs(Math.max(1, Math.min(10, parseInt(e.target.value)||1))));
+  $("#tableColsInput").addEventListener("input", (e) => {
+    let val = parseInt(e.target.value) || 1;
+    if(val < 1) val = 1; if(val > 10) val = 10;
+    renderHeaderInputs(val);
+  });
 }
 function renderHeaderInputs(n) {
   const existing = Array.from($$("#headersList input")).map(i => i.value);
   $("#headersList").innerHTML = Array.from({length:n}).map((_,i) => `
     <div class="header-input-row">
-      <span class="idx">${i+1}.</span><input type="text" placeholder="Columna ${i+1}" value="${escapeHtml(existing[i]||"")}" class="track-focus"/>
+      <span class="idx">${i+1}:</span>
+      <input type="text" placeholder="Ej: Encabezado ${i+1}" value="${escapeHtml(existing[i]||"")}" class="track-focus"/>
     </div>`).join("");
   $$("#headersList input.track-focus").forEach(el => el.addEventListener("focus", () => state.lastFocusedInput = el));
 }
@@ -284,19 +361,19 @@ function renderHeaderInputs(n) {
 async function createTable() {
   const title = $("#tableTitleInput").value.trim();
   const headers = Array.from($$("#headersList input")).map(i => i.value.trim()).filter(h => h);
-  if (!title || !headers.length) return toast("Falta título o encabezados", "error");
+  if (!title || !headers.length) return toast("Falta rellenar el título o los encabezados", "error");
   showLoading(true);
   try {
     const data = await apiCall("createTable", { themeId: state.currentTheme.id, title, headers });
-    state.tables.push(data.table); closeModal("modalTable"); renderTables(); toast("Tabla creada", "success");
-  } catch(e){ toast("Error", "error"); } finally { showLoading(false); }
+    state.tables.push(data.table); closeModal("modalTable"); renderTables(); toast("Tabla estructurada con éxito", "success");
+  } catch(e){ toast("Error al crear tabla", "error"); } finally { showLoading(false); }
 }
 function deleteTable(id, title) {
-  confirmAction("Eliminar tabla", `¿Eliminar "${title}"?`, async () => {
+  confirmAction("Eliminar Tabla", `¿Seguro que deseas eliminar la tabla "${title}" de manera permanente?`, async () => {
     showLoading(true);
     try {
       await apiCall("deleteTable", { themeId: state.currentTheme.id, tableId: id });
-      state.tables = state.tables.filter(t => t.id !== id); renderTables(); toast("Eliminada", "success");
+      state.tables = state.tables.filter(t => t.id !== id); renderTables(); toast("Tabla eliminada", "success");
     } catch(e){} finally { showLoading(false); }
   });
 }
@@ -306,7 +383,7 @@ async function updateCell(tableId, row, col, value) {
     await apiCall("updateCell", { themeId: state.currentTheme.id, tableId, rowIndex: row, colIndex: col, value });
     const t = state.tables.find(x => x.id === tableId);
     if(t){ if(!t.rows[row]) t.rows[row]=[]; t.rows[row][col] = value; }
-  } catch (e) { toast("Error guardando celda", "error"); }
+  } catch (e) { console.error(e); }
 }
 
 async function addRow(tableId) {
@@ -314,19 +391,48 @@ async function addRow(tableId) {
   try {
     await apiCall("addRow", { themeId: state.currentTheme.id, tableId });
     const t = state.tables.find(x => x.id === tableId);
-    if(t) t.rows.push(new Array(t.headers.length).fill(""));
+    if(t) {
+      t.rows.push(new Array(t.headers.length).fill(""));
+      // Las filas nuevas se inician en modo edición (desbloqueadas para escribir directo)
+      const newRowIdx = t.rows.length - 1;
+      state.savedRowsStatus[`${tableId}_${newRowIdx}`] = false;
+    }
     renderTables();
+    // Auto-foco en el primer campo de la nueva fila
+    setTimeout(() => {
+      const inputs = $$(`.cell-input[data-tbl="${tableId}"]`);
+      if (inputs.length) inputs[inputs.length - t.headers.length].focus();
+    }, 60);
   } catch(e){} finally { showLoading(false); }
 }
+
 async function deleteRow(tableId, rowIndex) {
-  showLoading(true);
-  try {
-    await apiCall("deleteRow", { themeId: state.currentTheme.id, tableId, rowIndex });
-    const t = state.tables.find(x => x.id === tableId);
-    if(t) t.rows.splice(rowIndex, 1);
-    renderTables();
-  } catch(e){} finally { showLoading(false); }
+  confirmAction("Eliminar Fila", "¿Eliminar este registro completo?", async () => {
+    showLoading(true);
+    try {
+      await apiCall("deleteRow", { themeId: state.currentTheme.id, tableId, rowIndex });
+      const t = state.tables.find(x => x.id === tableId);
+      if(t) t.rows.splice(rowIndex, 1);
+      
+      // Reestructurar los estados guardados de las filas subsiguientes de la tabla
+      const prefix = `${tableId}_`;
+      const newStatus = {};
+      Object.keys(state.savedRowsStatus).forEach(key => {
+        if (key.startsWith(prefix)) {
+          const idx = parseInt(key.split("_")[1]);
+          if (idx < rowIndex) newStatus[key] = state.savedRowsStatus[key];
+          else if (idx > rowIndex) newStatus[`${tableId}_${idx-1}`] = state.savedRowsStatus[key];
+        } else {
+          newStatus[key] = state.savedRowsStatus[key];
+        }
+      });
+      state.savedRowsStatus = newStatus;
+      renderTables();
+      toast("Fila eliminada", "success");
+    } catch(e){} finally { showLoading(false); }
+  });
 }
+
 async function renameColumn(tableId, colIndex, newName) {
   const name = newName.trim(); if(!name) return renderTables();
   try {
@@ -337,8 +443,8 @@ async function renameColumn(tableId, colIndex, newName) {
 }
 async function appendColumn(tableId) {
   const t = state.tables.find(x => x.id === tableId);
-  const name = prompt("Nombre columna:", "Col " + ((t?.headers.length||0)+1));
-  if (!name) return;
+  const name = prompt("Nombre de la nueva columna:", "Columna " + ((t?.headers.length||0)+1));
+  if (!name || !name.trim()) return;
   showLoading(true);
   try {
     await apiCall("addColumn", { themeId: state.currentTheme.id, tableId, name: name.trim() });
@@ -346,7 +452,7 @@ async function appendColumn(tableId) {
   } catch(e){} finally { showLoading(false); }
 }
 function askDeleteColumn(tableId, colIndex, colName) {
-  confirmAction("Eliminar columna", `¿Eliminar columna "${colName}" completa?`, async () => {
+  confirmAction("Eliminar columna", `¿Eliminar columna "${colName}"? Se perderán todos sus datos guardados en cada fila.`, async () => {
     showLoading(true);
     try {
       await apiCall("deleteColumn", { themeId: state.currentTheme.id, tableId, colIndex });
@@ -355,30 +461,116 @@ function askDeleteColumn(tableId, colIndex, colName) {
   });
 }
 
-/* Virtual Keyboard Logic */
+/* =========================================================
+   Banco de Datos del Teclado Internacional Multilenguaje
+   ========================================================= */
 const vkData = {
-  math: ['∀', '∃', '∅', '∇', '∈', '∉', '∑', '∏', '∫', '∝', '∞', '≈', '≠', '≤', '≥', '±', '×', '÷', '√', 'π', 'θ', 'λ', 'μ', 'σ', 'Δ', 'Ω', '°'],
-  greek: ['α','β','γ','δ','ε','ζ','η','θ','ι','κ','λ','μ','ν','ξ','ο','π','ρ','σ','τ','υ','φ','χ','ψ','ω','Γ','Δ','Θ','Λ','Ξ','Π','Σ','Φ','Ψ','Ω'],
-  ipa: ['ə','æ','ʃ','ʒ','ʧ','ʤ','θ','ð','ŋ','j','w','ɪ','ʊ','ʌ','ɔ','ɑ','ɒ','ɜ','ɛ','ɡ','ɾ','ʔ','ˈ','ˌ','ː'],
-  cyrillic: ['А','Б','В','Г','Д','Е','Ё','Ж','З','И','Й','К','Л','М','Н','О','П','Р','С','Т','У','Ф','Х','Ц','Ч','Ш','Щ','Ъ','Ы','Ь','Э','Ю','Я', 'а','б','в','г','д','е','ё','ж','з','и','й','к','л','м','н','о','п','р','с','т','у','ф','х','ц','ч','ш','щ','ъ','ы','ь','э','ю','я'],
-  accents: ['á','é','í','ó','ú','ñ','ü','Á','É','Í','Ó','Ú','Ñ','Ü','¿','¡','ç','Ç','à','è','ì','ò','ù','â','ê','î','ô','û','ä','ë','ï','ö']
+  japanese_hiragana: [
+    ['あ','い','う','え','お','か','き','く','け','こ','さ','し','す','せ','そ'],
+    ['た','ち','つ','て','と','な','に','ぬ','ね','の','⾘','ひ','ふ','へ','ほ'],
+    ['ま','み','む','め','も','や','ゆ','よ','ら','り','る','れ','ろ','わ','を','ん'],
+    ['が','ぎ','ぐ','げ','ご','ざ','じ','ず','ぜ','ぞ','だ','ぢ','づ','で','ど'],
+    ['ば','び','ぶ','べ','ぼ','ぱ','ぴ','ぷ','ぺ','ぽ','っ','ゃ','ゅ','ょ','ー']
+  ].flat(),
+  japanese_katakana: [
+    ['ア','イ','ウ','エ','オ','カ','キ','ク','ケ','コ','サ','シ','ス','セ','ソ'],
+    ['タ','チ','ツ','テ','ト','ナ','ニ','ヌ','ネ','ノ','ハ','ヒ','フ','ヘ','ホ'],
+    ['マ','ミ','ム','メ','モ','ヤ','ユ','ヨ','ラ','リ','ル','レ','ロ','ワ','ヲ','ン'],
+    ['ガ','ギ','グ','ゲ','ゴ','ザ','ジ','ズ','ゼ','ぞ','ダ','ヂ','ヅ','デ','ド'],
+    ['バ','ビ','ブ','ベ','ぼ','パ','ピ','プ','ペ','ポ','ッ','ャ','ュ','ョ','ヴ']
+  ].flat(),
+  chinese_common: [
+    '一','二','三','四','五','六','七','八','九','十','百','千','万','人','子','女',
+    '日','月','年','中','国','华','语','学','习','大','小','高','美','好','谢','欢',
+    '迎','天','地','水','火','山','川','风','雨','客','家','看','听','写','说','读'
+  ],
+  korean_hangul: [
+    'ㄱ','ㄴ','ㄷ','ㄹ','ㅁ','ㅂ','ㅅ','ㅇ','ㅈ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ',
+    'ㄲ','ㄸ','ㅃ','ㅆ','ㅉ','ㄳ','ㄵ','ㄶ','ㄺ','ㄻ','ㄼ','ㄽ','ㄾ','ㄿ','ㅀ','ㅄ',
+    'ㅏ','ㅐ','ㅑ','ㅒ','ㅓ','ㅔ','ㅕ','ㅖ','ㅗ','ㅘ','ㅙ','ㅚ','ㅛ','ㅜ','ㅝ','ㅞ','ㅟ','ㅠ','ㅡ','ㅢ','ㅣ'
+  ],
+  arabic: [
+    'أ','ب','ت','ث','ج','ح','خ','د','ذ','ر','ز','س','ش','ص','ض','ط','ظ','ع','غ','ف','ق','ك','ل','م','ن','ه','و','ي',
+    'ء','آ','ى','ة','ـ','َ','ُ','ِ','ّ','ْ','ً','ٌ','ٍ','١','٢','٣','٤','٥','٦','٧','٨','٩','٠'
+  ],
+  greek: [
+    'α','β','γ','δ','ε','ζ','η','θ','ι','κ','λ','μ','ν','ξ','ο','π','ρ','σ','τ','υ','φ','χ','ψ','ω',
+    'Α','Β','Г','Δ','Ε','Ζ','Η','Θ','Ι','Κ','Λ','Μ','Ν','Ξ','Ο','Π','Ρ','Σ','Τ','Υ','Φ','Χ','Ψ','Ω'
+  ],
+  cyrillic: [
+    'А','Б','В','Г','Д','Е','Ё','Ж','З','И','Й','К','Л','М','Н','О','П','Р','С','Т','У','Ф','Х','Ц','Ч','Ш','Щ','Ъ','Ы','Ь','Э','Ю','Я',
+    'а','б','в','г','д','е','ё','ж','з','и','й','к','л','м','н','о','п','р','с','т','у','ф','х','ц','ч','ш','щ','ъ','ы','ь','э','ю','я'
+  ],
+  ipa: [
+    'ə','æ','ʃ','ʒ','ʧ','ʤ','θ','ð','ŋ','j','w','ɪ','ʊ','ʌ','ɔ','ɑ','ɒ','ɜ','ɛ','ɡ','ɾ','ʔ','β','ç','ɟ','ɲ','卓越','ʎ','χ','ʁ','ħ','ʕ','ɦ',
+    'ˈ','ˌ','ː','ˑ','▫','œ','ø','ɒ','产','ɯ','ɤ','ʌ','📍'
+  ],
+  math: [
+    '∀','∃','∄','∅','∆','∇','∈','∉','∊','∋','∏','∑','−','∓','×','÷','⁄','∗','∘','∙','√','∛','∝','∞','∠','∧','∨','∩','∪','∫','∬','∭',
+    '∴','∵','∶','∷','∼','≈','≃','≠','≡','≤','≥','⊂','⊃','⊆','⊇','⊕','⊗','⊥','⋅','π','θ','λ','μ','σ','Ω','τ','δ','ε','∂'
+  ],
+  accents: [
+    'á','é','í','ó','ú','ñ','ü','ç','à','è','ì','ò','ù','â','ê','î','ô','û','ä','ë','ï','ö','ÿ','æ','œ','ß',
+    'Á','É','Í','Ó','Ú','Ñ','Ü','Ç','À','È','Ì','Ò','Ù','Â','Ê','Î','Ô','Û','Ä','Ë','Ï','Ö','¿','¡'
+  ]
+};
+
+/* Diccionario fonético o descriptivo para buscar caracteres escribiendo en español/inglés */
+const vkDescriptions = {
+  'α': 'alfa alpha griego', 'β': 'beta griego', 'γ': 'gamma griego', 'δ': 'delta griego', 'ε': 'epsilon griego', 'π': 'pi314 matematica griego',
+  'λ': 'lambda griego longitud', 'μ': 'mu micro griego', 'σ': 'sigma griego', 'Ω': 'omega griego ohmio', 'θ': 'theta zeta theta griego',
+  '∑': 'sumatoria suma total matematica', '∏': 'productoria producto matematica', '∫': 'integral calculo matematica', '∞': 'infinito matematica',
+  '≈': 'aproximado casi igual matematica', '≠': 'no es igual diferente distinto matematica', '≤': 'menor o igual matematica', '≥': 'mayor o igual matematica',
+  '√': 'raiz cuadrada matematica', '±': 'mas menos matematica', '÷': 'division dividir matematica', '×': 'multiplicacion por matematica',
+  'あ': 'a japanese hiragana japones', 'い': 'i japanese hiragana japones', 'う': 'u japanese hiragana japones', 'え': 'e japanese hiragana japones', 'お': 'o japanese hiragana japones',
+  '一': 'uno 1 chino chinese', '二': 'dos 2 chino chinese', '三': 'tres 3 chino chinese', '人': 'persona humano chino chinese', '日': 'sol dia chino chinese', '月': 'luna mes chino chinese', '年': 'ano year chino chinese'
 };
 
 function toggleVirtualKeyboard() {
   const vk = $("#virtualKeyboard");
   vk.classList.toggle("hidden");
-  if (!vk.classList.contains("hidden")) renderVKLayout($("#vkLayoutSelect").value);
+  if (!vk.classList.contains("hidden")) {
+    renderVKLayout();
+    $("#vkSearchInput").focus();
+  }
 }
 
-function renderVKLayout(layout) {
-  const chars = vkData[layout] || [];
-  $("#vkKeysContainer").innerHTML = chars.map(c => `<div class="vk-key" onclick="insertVKChar('${c}')">${c}</div>`).join("");
+function renderVKLayout() {
+  const container = $("#vkKeysContainer");
+  const layout = state.currentVKLayout;
+  const search = state.vkSearchQuery.toLowerCase().trim();
+  
+  let chars = vkData[layout] || [];
+  
+  // Si hay búsqueda activa, filtramos en todo el set de caracteres o por descripción
+  if (search) {
+    chars = [];
+    // Buscar en TODOS los esquemas disponibles para facilidad del usuario
+    Object.keys(vkData).forEach(key => {
+      vkData[key].forEach(char => {
+        const desc = vkDescriptions[char] || '';
+        if (char.toLowerCase().includes(search) || desc.includes(search)) {
+          if (!chars.includes(char)) chars.push(char);
+        }
+      });
+    });
+  }
+
+  if (chars.length === 0) {
+    container.innerHTML = `<div class="vk-no-results">No se encontraron símbolos para "${escapeHtml(state.vkSearchQuery)}"</div>`;
+    return;
+  }
+
+  container.innerHTML = chars.map(c => `<div class="vk-key" title="${escapeHtml(vkDescriptions[c] || 'Carácter')}" onclick="insertVKChar('${c}')">${c}</div>`).join("");
 }
 
 function insertVKChar(char) {
   const input = state.lastFocusedInput;
-  if (!input) return toast("Selecciona una celda primero", "error");
+  if (!input) return toast("Por favor haz clic en una celda o campo de texto primero", "error");
   
+  // Si la celda está bloqueada (disabled), no hacer nada
+  if (input.disabled) return toast("La fila seleccionada está bloqueada. Dale a 'Editar' primero.", "error");
+
   const start = input.selectionStart || 0;
   const end = input.selectionEnd || 0;
   const text = input.value || input.textContent || "";
@@ -388,15 +580,24 @@ function insertVKChar(char) {
   if (input.tagName === 'TEXTAREA' || input.tagName === 'INPUT') {
     input.value = newText;
     input.focus();
-    input.setSelectionRange(start + char.length, start + char.length);
+    // Restablece la selección del cursor justo después del carácter insertado
+    const nextCursorPos = start + char.length;
+    input.setSelectionRange(nextCursorPos, nextCursorPos);
     if(input.tagName === 'TEXTAREA') autoGrow(input);
   } else {
     input.textContent = newText;
   }
+  
+  // Sincroniza reactivamente el cambio en el estado en memoria de forma inmediata
+  if (input.dataset.tbl) {
+    const { tbl, row, col } = input.dataset;
+    const t = state.tables.find(x => x.id === tbl);
+    if(t && t.rows[row]) t.rows[row][col] = input.value;
+  }
 }
 
-// Draggable Keyboard
-const dragVK = () => {
+/* Sistema Arrastrable (Draggable Widget) */
+const setupDraggableKeyboard = () => {
   const el = $("#virtualKeyboard");
   const handle = $(".vk-header");
   let isDragging = false, currentX, currentY, initialX, initialY, xOffset = 0, yOffset = 0;
@@ -405,34 +606,61 @@ const dragVK = () => {
   document.addEventListener("mouseup", dragEnd);
   document.addEventListener("mousemove", drag);
   
+  // Soporte Touch para móviles y tablets
+  handle.addEventListener("touchstart", (e) => dragStart(e.touches[0]), {passive: true});
+  document.addEventListener("touchend", dragEnd);
+  document.addEventListener("touchmove", (e) => drag(e.touches[0]));
+  
   function dragStart(e) {
-    if(e.target.closest('select') || e.target.closest('button')) return;
+    if(e.target.closest('select') || e.target.closest('button') || e.target.closest('input')) return;
     initialX = e.clientX - xOffset; initialY = e.clientY - yOffset;
     isDragging = true;
   }
   function dragEnd() { isDragging = false; }
   function drag(e) {
     if (!isDragging) return;
-    e.preventDefault();
     currentX = e.clientX - initialX; currentY = e.clientY - initialY;
     xOffset = currentX; yOffset = currentY;
     el.style.transform = `translate(${currentX}px, ${currentY}px)`;
   }
 };
 
+/* Document Ready initialization */
 document.addEventListener("DOMContentLoaded", () => {
-  setupThemeModal(); setupTableModal();
-  if (state.demoMode) toast("Modo Demo local.", "info");
+  setupThemeModal(); 
+  setupTableModal();
+  
+  if (state.demoMode) {
+    toast("Modo Offline Demo activado (datos en LocalStorage)", "info");
+  }
+  
   loadThemes();
   
-  // Track globally for text inputs
+  // Seguir focos globales de inputs editables
   document.addEventListener("focusin", (e) => {
-    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
+    if ((e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') && !e.target.disabled) {
       state.lastFocusedInput = e.target;
     }
   });
 
+  // Handlers del Teclado
   $("#btnToggleKeyboard").addEventListener("click", toggleVirtualKeyboard);
-  $("#vkLayoutSelect").addEventListener("change", (e) => renderVKLayout(e.target.value));
-  dragVK();
+  $("#vkLayoutSelect").addEventListener("change", (e) => {
+    state.currentVKLayout = e.target.value;
+    renderVKLayout();
+  });
+  
+  $("#vkSearchInput").addEventListener("input", (e) => {
+    state.vkSearchQuery = e.target.value;
+    renderVKLayout();
+  });
+
+  setupDraggableKeyboard();
+
+  // Cerrar Modales presionando la tecla Escape
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      $$(".modal-overlay").forEach((m) => (m.hidden = true));
+    }
+  });
 });

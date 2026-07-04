@@ -19,12 +19,13 @@
           <span class="brand-emoji">📚</span>
           <div>
             <h1>Tablas de Aprendizaje</h1>
-            <p class="subtitle">Crea temas, organiza tablas y aprende lo que quieras.</p>
+            <p class="subtitle">Crea temas, organiza tablas y aprende lo que quieras con soporte multilenguaje.</p>
           </div>
         </div>
         <div class="header-actions">
           <button id="btnToggleKeyboard" class="btn btn-ghost" title="Mostrar/Ocultar Teclado Virtual">
             <span class="material-icons-round">keyboard</span>
+            <span class="btn-text">Teclado Virtual</span>
           </button>
           <button id="btnNewTheme" class="btn btn-primary">
             <span class="material-icons-round">add</span> Nuevo tema
@@ -68,19 +69,38 @@
     </main>
   </div>
 
-  <!-- Teclado Virtual -->
+  <!-- Teclado Virtual Avanzado / Multilenguaje -->
   <div id="virtualKeyboard" class="virtual-keyboard hidden">
     <div class="vk-header">
-      <span class="vk-title"><span class="material-icons-round" style="font-size: 18px;">language</span> Teclado de Símbolos</span>
+      <div class="vk-title-group">
+        <span class="material-icons-round">language</span>
+        <span class="vk-title">Símbolos e Idiomas</span>
+      </div>
       <select id="vkLayoutSelect" class="vk-select">
-        <option value="math">Matemáticas</option>
-        <option value="greek">Griego</option>
-        <option value="ipa">IPA (Fonética)</option>
-        <option value="cyrillic">Cirílico (Ruso básico)</option>
-        <option value="accents">Acentos Especiales</option>
+        <optgroup label="Idiomas Asiáticos">
+          <option value="japanese_hiragana">Japonés (Hiragana)</option>
+          <option value="japanese_katakana">Japonés (Katakana)</option>
+          <option value="chinese_common">Chino (Ideogramas comunes)</option>
+          <option value="korean_hangul">Coreano (Hangul Jamo)</option>
+        </optgroup>
+        <optgroup label="Otros Idiomas y Fonética">
+          <option value="arabic">Árabe</option>
+          <option value="greek">Griego</option>
+          <option value="cyrillic">Cirílico (Ruso)</option>
+          <option value="ipa">IPA (Fonética)</option>
+        </optgroup>
+        <optgroup label="Ciencias y Acentos">
+          <option value="math">Matemáticas y Lógica</option>
+          <option value="accents">Acentos Especiales</option>
+        </optgroup>
       </select>
-      <div class="vk-drag-handle material-icons-round" title="Mover">drag_indicator</div>
+      <div class="vk-drag-handle material-icons-round" title="Arrastrar teclado">drag_indicator</div>
       <button class="vk-close material-icons-round" onclick="toggleVirtualKeyboard()">close</button>
+    </div>
+    <!-- Buscador interno de símbolos rápidos -->
+    <div class="vk-search-container">
+      <span class="material-icons-round search-icon">search</span>
+      <input type="text" id="vkSearchInput" placeholder="Buscar símbolo (ej: alfa, k, integral)..." />
     </div>
     <div id="vkKeysContainer" class="vk-keys"></div>
   </div>
@@ -99,9 +119,8 @@
         </label>
         <label class="field">
           <span>Nombre del tema</span>
-          <input type="text" id="themeNameInput" placeholder="Ej: Vocabulario en inglés" />
+          <input type="text" id="themeNameInput" placeholder="Ej: Vocabulario Asiático" />
         </label>
-        <p class="hint">El emoji es opcional.</p>
       </div>
       <div class="modal-foot">
         <button class="btn btn-ghost" onclick="closeModal('modalTheme')">Cancelar</button>
@@ -120,7 +139,7 @@
         <div class="form-grid">
           <label class="field">
             <span>Título de la tabla</span>
-            <input type="text" id="tableTitleInput" placeholder="Ej: Verbos irregulares" />
+            <input type="text" id="tableTitleInput" placeholder="Ej: Caracteres Básicos" />
           </label>
           <label class="field">
             <span>Número de columnas</span>
