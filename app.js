@@ -1,5 +1,5 @@
 /* =========================================================
-   Tablas de Aprendizaje — Lógica Avanzada Completa
+   Tablas de Aprendizaje — Lógica Avanzada Completa (Responsiva + Reorden)
    ========================================================= */
 let state = {
   themes: [],
@@ -98,6 +98,11 @@ async function demoCall(action, payload) {
     case "deleteRow":
       const tb3 = findTable(db, payload.themeId, payload.tableId);
       tb3.rows.splice(payload.rowIndex, 1); save(db); return {};
+    case "moveRow":
+      const tbMove = findTable(db, payload.themeId, payload.tableId);
+      const rowToMove = tbMove.rows.splice(payload.rowIndex, 1)[0];
+      tbMove.rows.splice(payload.newIndex, 0, rowToMove);
+      save(db); return {};
     case "renameColumn":
       const tb4 = findTable(db, payload.themeId, payload.tableId);
       tb4.headers[payload.colIndex] = payload.name; save(db); return {};
@@ -195,11 +200,10 @@ function renderTableCard(t) {
         </span>
       </div>
     </th>
-  `).join("") + `<th style="width:100px; text-align:center;">Acción</th>`;
+  `).join("") + `<th style="width:140px; text-align:center;">Acción</th>`;
 
   const bodyRows = rows.map((row, rIdx) => {
     const rowKey = `${t.id}_${rIdx}`;
-    // Si no está definido, por defecto las celdas viejas con contenido se asumen guardadas, las nuevas libres.
     if (state.savedRowsStatus[rowKey] === undefined) {
       const hasContent = row.some(c => c && c.trim() !== "");
       state.savedRowsStatus[rowKey] = hasContent; 
@@ -218,12 +222,19 @@ function renderTableCard(t) {
       ? `<button class="row-action-btn btn-row-edit material-icons-round" title="Editar Fila" onclick="toggleRowEdit('${t.id}', ${rIdx}, false)">edit</button>`
       : `<button class="row-action-btn btn-row-save material-icons-round" title="Guardar Fila" onclick="toggleRowEdit('${t.id}', ${rIdx}, true)">save</button>`;
 
+    const isFirst = rIdx === 0;
+    const isLast = rIdx === rows.length - 1;
+
     return `
       <tr class="${isSaved ? 'row-saved' : 'row-editing'}" data-row-index="${rIdx}">
         ${cellsHtml}
         <td class="row-actions-td">
-          ${actionButton}
-          <button class="row-action-btn btn-row-delete material-icons-round" title="Eliminar fila" onclick="deleteRow('${t.id}', ${rIdx})">delete</button>
+          <div class="action-buttons-container">
+            <button class="row-action-btn material-icons-round" title="Mover Arriba" onclick="moveRow('${t.id}', ${rIdx}, -1)" ${isFirst ? 'disabled style="opacity:0.3;cursor:not-allowed;"' : ''}>arrow_upward</button>
+            <button class="row-action-btn material-icons-round" title="Mover Abajo" onclick="moveRow('${t.id}', ${rIdx}, 1)" ${isLast ? 'disabled style="opacity:0.3;cursor:not-allowed;"' : ''}>arrow_downward</button>
+            ${actionButton}
+            <button class="row-action-btn btn-row-delete material-icons-round" title="Eliminar fila" onclick="deleteRow('${t.id}', ${rIdx})">delete</button>
+          </div>
         </td>
       </tr>
     `;
@@ -261,7 +272,6 @@ function attachCellListeners() {
   $$(".cell-input").forEach(el => {
     autoGrow(el);
     el.addEventListener("blur", async () => {
-      // Guarda en segundo plano de manera reactiva al salir si no está deshabilitado
       if (!el.disabled) {
         const { tbl, row, col } = el.dataset;
         await updateCell(tbl, +row, +col, el.value);
@@ -278,7 +288,6 @@ async function toggleRowEdit(tableId, rowIndex, shouldSave) {
   const rowKey = `${tableId}_${rowIndex}`;
   
   if (shouldSave) {
-    // Si le dio a Guardar, recolectamos los valores actuales de las celdas de esa fila y los aseguramos
     showLoading(true);
     try {
       const inputs = Array.from($$(`.cell-input[data-tbl="${tableId}"][data-row="${rowIndex}"]`));
@@ -294,19 +303,49 @@ async function toggleRowEdit(tableId, rowIndex, shouldSave) {
       showLoading(false);
     }
   } else {
-    // Si le dio a Editar, desbloqueamos el estado de esa fila
     state.savedRowsStatus[rowKey] = false;
   }
   
-  // Volver a renderizar las tablas para refrescar los estados visuales (disabled / botones)
   renderTables();
   
-  // Si fue una acción de edición, poner foco en la primera celda automáticamente
   if (!shouldSave) {
     setTimeout(() => {
       const dynamicInput = $(`.cell-input[data-tbl="${tableId}"][data-row="${rowIndex}"]`);
       if (dynamicInput) { dynamicInput.focus(); }
     }, 50);
+  }
+}
+
+/* Mover filas arriba o abajo */
+async function moveRow(tableId, rowIndex, direction) {
+  const t = state.tables.find(x => x.id === tableId);
+  if (!t) return;
+  
+  const newIndex = rowIndex + direction;
+  if (newIndex < 0 || newIndex >= t.rows.length) return;
+
+  showLoading(true);
+  try {
+    await apiCall("moveRow", { themeId: state.currentTheme.id, tableId, rowIndex, newIndex });
+
+    // Intercambiar en el array local
+    const tempRow = t.rows[rowIndex];
+    t.rows[rowIndex] = t.rows[newIndex];
+    t.rows[newIndex] = tempRow;
+
+    // Intercambiar el estado de bloqueo
+    const key1 = `${tableId}_${rowIndex}`;
+    const key2 = `${tableId}_${newIndex}`;
+    const tempStatus = state.savedRowsStatus[key1];
+    state.savedRowsStatus[key1] = state.savedRowsStatus[key2];
+    state.savedRowsStatus[key2] = tempStatus;
+
+    // Ajustar los identificadores en el DOM (renderizado)
+    renderTables();
+  } catch(e) {
+    toast("Error al mover la fila", "error");
+  } finally {
+    showLoading(false);
   }
 }
 
@@ -393,12 +432,10 @@ async function addRow(tableId) {
     const t = state.tables.find(x => x.id === tableId);
     if(t) {
       t.rows.push(new Array(t.headers.length).fill(""));
-      // Las filas nuevas se inician en modo edición (desbloqueadas para escribir directo)
       const newRowIdx = t.rows.length - 1;
       state.savedRowsStatus[`${tableId}_${newRowIdx}`] = false;
     }
     renderTables();
-    // Auto-foco en el primer campo de la nueva fila
     setTimeout(() => {
       const inputs = $$(`.cell-input[data-tbl="${tableId}"]`);
       if (inputs.length) inputs[inputs.length - t.headers.length].focus();
@@ -414,7 +451,6 @@ async function deleteRow(tableId, rowIndex) {
       const t = state.tables.find(x => x.id === tableId);
       if(t) t.rows.splice(rowIndex, 1);
       
-      // Reestructurar los estados guardados de las filas subsiguientes de la tabla
       const prefix = `${tableId}_`;
       const newStatus = {};
       Object.keys(state.savedRowsStatus).forEach(key => {
@@ -515,7 +551,6 @@ const vkData = {
   ]
 };
 
-/* Diccionario fonético o descriptivo para buscar caracteres escribiendo en español/inglés */
 const vkDescriptions = {
   'α': 'alfa alpha griego', 'β': 'beta griego', 'γ': 'gamma griego', 'δ': 'delta griego', 'ε': 'epsilon griego', 'π': 'pi314 matematica griego',
   'λ': 'lambda griego longitud', 'μ': 'mu micro griego', 'σ': 'sigma griego', 'Ω': 'omega griego ohmio', 'θ': 'theta zeta theta griego',
@@ -542,10 +577,8 @@ function renderVKLayout() {
   
   let chars = vkData[layout] || [];
   
-  // Si hay búsqueda activa, filtramos en todo el set de caracteres o por descripción
   if (search) {
     chars = [];
-    // Buscar en TODOS los esquemas disponibles para facilidad del usuario
     Object.keys(vkData).forEach(key => {
       vkData[key].forEach(char => {
         const desc = vkDescriptions[char] || '';
@@ -568,7 +601,6 @@ function insertVKChar(char) {
   const input = state.lastFocusedInput;
   if (!input) return toast("Por favor haz clic en una celda o campo de texto primero", "error");
   
-  // Si la celda está bloqueada (disabled), no hacer nada
   if (input.disabled) return toast("La fila seleccionada está bloqueada. Dale a 'Editar' primero.", "error");
 
   const start = input.selectionStart || 0;
@@ -580,7 +612,6 @@ function insertVKChar(char) {
   if (input.tagName === 'TEXTAREA' || input.tagName === 'INPUT') {
     input.value = newText;
     input.focus();
-    // Restablece la selección del cursor justo después del carácter insertado
     const nextCursorPos = start + char.length;
     input.setSelectionRange(nextCursorPos, nextCursorPos);
     if(input.tagName === 'TEXTAREA') autoGrow(input);
@@ -588,7 +619,6 @@ function insertVKChar(char) {
     input.textContent = newText;
   }
   
-  // Sincroniza reactivamente el cambio en el estado en memoria de forma inmediata
   if (input.dataset.tbl) {
     const { tbl, row, col } = input.dataset;
     const t = state.tables.find(x => x.id === tbl);
@@ -606,7 +636,6 @@ const setupDraggableKeyboard = () => {
   document.addEventListener("mouseup", dragEnd);
   document.addEventListener("mousemove", drag);
   
-  // Soporte Touch para móviles y tablets
   handle.addEventListener("touchstart", (e) => dragStart(e.touches[0]), {passive: true});
   document.addEventListener("touchend", dragEnd);
   document.addEventListener("touchmove", (e) => drag(e.touches[0]));
@@ -636,14 +665,12 @@ document.addEventListener("DOMContentLoaded", () => {
   
   loadThemes();
   
-  // Seguir focos globales de inputs editables
   document.addEventListener("focusin", (e) => {
     if ((e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') && !e.target.disabled) {
       state.lastFocusedInput = e.target;
     }
   });
 
-  // Handlers del Teclado
   $("#btnToggleKeyboard").addEventListener("click", toggleVirtualKeyboard);
   $("#vkLayoutSelect").addEventListener("change", (e) => {
     state.currentVKLayout = e.target.value;
@@ -657,7 +684,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   setupDraggableKeyboard();
 
-  // Cerrar Modales presionando la tecla Escape
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
       $$(".modal-overlay").forEach((m) => (m.hidden = true));
