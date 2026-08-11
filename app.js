@@ -189,16 +189,21 @@ function renderTableCard(t) {
   const headers = t.headers || [];
   const rows = t.rows || [];
   
+  // 1. GENERACIÓN DE ENCABEZADOS (Muestra los nombres reales de las columnas)
   const headersHtml = headers.map((h, i) => `
     <th>
-      <div class="title" style="cursor:pointer;" onclick="renameTablePrompt('${t.id}', '${escapeHtml(t.title)}')">
-        <span class="material-icons-round" style="color:var(--primary)">table_chart</span> 
-        ${escapeHtml(t.title)}
-        <span class="material-icons-round" style="font-size: 1rem; color: var(--text-muted); margin-left: 5px;" title="Editar Título">edit</span>
+      <div class="col-head">
+        <span class="col-name" contenteditable="true" 
+          onblur="renameColumn('${t.id}', ${i}, this.textContent)"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${escapeHtml(h)}</span>
+        <span class="col-actions">
+          <button class="del material-icons-round" title="Eliminar columna" onclick="askDeleteColumn('${t.id}', ${i}, '${escapeHtml(h)}')">delete_outline</button>
+        </span>
       </div>
     </th>
   `).join("") + `<th style="width:140px; text-align:center;">Acción</th>`;
 
+  // 2. GENERACIÓN DE FILAS
   const bodyRows = rows.map((row, rIdx) => {
     const rowKey = `${t.id}_${rIdx}`;
     if (state.savedRowsStatus[rowKey] === undefined) {
@@ -237,10 +242,15 @@ function renderTableCard(t) {
     `;
   }).join("");
 
+  // 3. ESTRUCTURA FINAL (Aquí es donde va el título editable correctamente)
   return `
     <div class="table-card" data-tbl="${t.id}">
       <div class="table-card-head">
-        <div class="title"><span class="material-icons-round" style="color:var(--primary)">table_chart</span> ${escapeHtml(t.title)}</div>
+        <div class="title" style="cursor:pointer;" onclick="renameTablePrompt('${t.id}', '${escapeHtml(t.title)}')">
+          <span class="material-icons-round" style="color:var(--primary)">table_chart</span> 
+          ${escapeHtml(t.title)}
+          <span class="material-icons-round" style="font-size: 1rem; color: var(--text-muted); margin-left: 5px;" title="Editar Título">edit</span>
+        </div>
         <div class="table-card-actions">
           <button class="btn btn-ghost btn-sm" onclick="appendColumn('${t.id}')"><span class="material-icons-round">view_column</span> + Columna</button>
           <button class="btn btn-ghost btn-sm" onclick="addRow('${t.id}')"><span class="material-icons-round">table_rows</span> + Fila de Datos</button>
