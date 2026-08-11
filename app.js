@@ -11,6 +11,35 @@ let state = {
   currentVKLayout: 'japanese_hiragana',
   vkSearchQuery: ''
 };
+/* =========================================================
+   SISTEMA DE CACHÉ LOCAL (Carga ultrarrápida)
+   ========================================================= */
+function saveToCache() {
+  // Guardamos los temas y las tablas separadas por ID de tema
+  const cacheData = JSON.parse(localStorage.getItem("studyTablesCache") || '{"themes":[], "tables":{}}');
+  cacheData.themes = state.themes;
+  if (state.currentTheme) {
+    cacheData.tables[state.currentTheme.id] = state.tables;
+  }
+  localStorage.setItem("studyTablesCache", JSON.stringify(cacheData));
+}
+
+function loadFromCache(type) {
+  try {
+    const cached = JSON.parse(localStorage.getItem("studyTablesCache"));
+    if (!cached) return false;
+    
+    if (type === "themes" && cached.themes && cached.themes.length > 0) {
+      state.themes = cached.themes;
+      return true;
+    }
+    if (type === "tables" && state.currentTheme && cached.tables[state.currentTheme.id]) {
+      state.tables = cached.tables[state.currentTheme.id];
+      return true;
+    }
+  } catch(e) { console.error("Error leyendo caché", e); }
+  return false;
+}
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
@@ -119,11 +148,16 @@ async function demoCall(action, payload) {
 
 /* Temas core */
 async function loadThemes() {
-  showLoading(true);
+  // 1. Carga instantánea desde el dispositivo
+  if (loadFromCache("themes")) renderThemes(); 
+  else showLoading(true); // Solo muestra loading si es la primera vez
+  
   try {
+    // 2. Consulta a Google Drive en segundo plano
     const data = await apiCall("listThemes", {}, "GET");
     state.themes = data.themes || [];
-    renderThemes();
+    saveToCache(); // 3. Actualiza el caché local
+    renderThemes(); // 4. Refresca la vista si hubo cambios
   } catch (e) { toast("Error: " + e.message, "error"); } 
   finally { showLoading(false); }
 }
@@ -164,10 +198,16 @@ function showThemes() {
 /* Tablas core */
 async function loadTables() {
   if (!state.currentTheme) return;
-  showLoading(true);
+  
+  // 1. Carga instantánea de las tablas de este tema
+  if (loadFromCache("tables")) renderTables();
+  else showLoading(true);
+
   try {
+    // 2. Consulta a Google Drive en segundo plano
     const data = await apiCall("listTables", { themeId: state.currentTheme.id }, "GET");
     state.tables = data.tables || [];
+    saveToCache(); // 3. Actualiza el caché local
     renderTables();
   } catch (e) { toast("Error: " + e.message, "error"); } 
   finally { showLoading(false); }
@@ -376,15 +416,20 @@ async function createTheme() {
   showLoading(true);
   try {
     const data = await apiCall("createTheme", { name, emoji });
-    state.themes.push(data.theme); closeModal("modalTheme"); renderThemes(); toast("Tema creado con éxito", "success");
+    state.themes.push(data.theme); 
+    saveToCache(); // <-- GUARDA EN LOCAL
+    closeModal("modalTheme"); renderThemes(); toast("Tema creado con éxito", "success");
   } catch (e) { toast("Error: " + e.message, "error"); } finally { showLoading(false); }
 }
+
 function deleteTheme(id, name) {
   confirmAction("Eliminar tema permanente", `¿Deseas eliminar el tema "${name}"? Se borrarán todas las tablas asociadas en la nube.`, async () => {
     showLoading(true);
     try {
       await apiCall("deleteTheme", { themeId: id });
-      state.themes = state.themes.filter(t => t.id !== id); renderThemes(); toast("Tema eliminado", "success");
+      state.themes = state.themes.filter(t => t.id !== id); 
+      saveToCache(); // <-- GUARDA EN LOCAL
+      renderThemes(); toast("Tema eliminado", "success");
     } catch(e){ toast("Error", "error"); } finally { showLoading(false); }
   });
 }
@@ -417,15 +462,20 @@ async function createTable() {
   showLoading(true);
   try {
     const data = await apiCall("createTable", { themeId: state.currentTheme.id, title, headers });
-    state.tables.push(data.table); closeModal("modalTable"); renderTables(); toast("Tabla estructurada con éxito", "success");
+    state.tables.push(data.table); 
+    saveToCache(); // <-- GUARDA EN LOCAL
+    closeModal("modalTable"); renderTables(); toast("Tabla estructurada con éxito", "success");
   } catch(e){ toast("Error al crear tabla", "error"); } finally { showLoading(false); }
 }
+
 function deleteTable(id, title) {
   confirmAction("Eliminar Tabla", `¿Seguro que deseas eliminar la tabla "${title}" de manera permanente?`, async () => {
     showLoading(true);
     try {
       await apiCall("deleteTable", { themeId: state.currentTheme.id, tableId: id });
-      state.tables = state.tables.filter(t => t.id !== id); renderTables(); toast("Tabla eliminada", "success");
+      state.tables = state.tables.filter(t => t.id !== id); 
+      saveToCache(); // <-- GUARDA EN LOCAL
+      renderTables(); toast("Tabla eliminada", "success");
     } catch(e){} finally { showLoading(false); }
   });
 }
@@ -435,6 +485,7 @@ async function updateCell(tableId, row, col, value) {
     await apiCall("updateCell", { themeId: state.currentTheme.id, tableId, rowIndex: row, colIndex: col, value });
     const t = state.tables.find(x => x.id === tableId);
     if(t){ if(!t.rows[row]) t.rows[row]=[]; t.rows[row][col] = value; }
+    saveToCache(); // <-- GUARDA EN LOCAL CADA VEZ QUE ESCRIBES
   } catch (e) { console.error(e); }
 }
 
@@ -448,6 +499,7 @@ async function addRow(tableId) {
       const newRowIdx = t.rows.length - 1;
       state.savedRowsStatus[`${tableId}_${newRowIdx}`] = false;
     }
+    saveToCache(); // <-- GUARDA EN LOCAL
     renderTables();
     setTimeout(() => {
       const inputs = $$(`.cell-input[data-tbl="${tableId}"]`);
@@ -476,6 +528,7 @@ async function deleteRow(tableId, rowIndex) {
         }
       });
       state.savedRowsStatus = newStatus;
+      saveToCache(); // <-- GUARDA EN LOCAL
       renderTables();
       toast("Fila eliminada", "success");
     } catch(e){} finally { showLoading(false); }
