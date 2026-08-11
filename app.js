@@ -393,7 +393,7 @@ async function moveRow(tableId, rowIndex, direction) {
     state.savedRowsStatus[key1] = state.savedRowsStatus[key2];
     state.savedRowsStatus[key2] = tempStatus;
 
-    // Ajustar los identificadores en el DOM (renderizado)
+    saveToCache(); // <-- GUARDAMOS EL NUEVO ORDEN EN LOCAL
     renderTables();
   } catch(e) {
     toast("Error al mover la fila", "error");
@@ -773,14 +773,20 @@ async function editCurrentTheme() {
       emoji: newEmoji || "📖" 
     });
     
-    // Actualizar estado local y UI
+    // Actualizar estado local
     state.currentTheme.name = newName.trim();
     state.currentTheme.emoji = newEmoji || "📖";
     $("#themeName").textContent = state.currentTheme.name;
     $("#themeEmoji").textContent = state.currentTheme.emoji;
     
-    // Refrescar el listado general en background
-    loadThemes(); 
+    // Buscamos el tema en la lista y lo actualizamos
+    const themeIndex = state.themes.findIndex(t => t.id === state.currentTheme.id);
+    if(themeIndex !== -1) {
+       state.themes[themeIndex].name = state.currentTheme.name;
+       state.themes[themeIndex].emoji = state.currentTheme.emoji;
+    }
+    
+    saveToCache(); // <-- GUARDAMOS EL TEMA EDITADO EN LOCAL
     toast("Tema actualizado con éxito", "success");
   } catch(e) { 
     toast("Error al editar el tema: " + e.message, "error"); 
@@ -800,7 +806,13 @@ async function renameTablePrompt(tableId, currentTitle) {
       tableId, 
       title: newTitle.trim() 
     });
-    await loadTables();
+    
+    // Actualizamos el título localmente
+    const t = state.tables.find(x => x.id === tableId);
+    if (t) t.title = newTitle.trim();
+    
+    saveToCache(); // <-- GUARDAMOS EL NUEVO TÍTULO EN LOCAL
+    renderTables(); // Refrescamos la vista rápido
     toast("Tabla renombrada", "success");
   } catch(e) { 
     toast("Error al renombrar: " + e.message, "error"); 
