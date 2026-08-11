@@ -190,15 +190,20 @@ function renderTableCard(t) {
   const rows = t.rows || [];
   
   // 1. GENERACIÓN DE ENCABEZADOS (Muestra los nombres reales de las columnas)
+  // 1. GENERACIÓN DE ENCABEZADOS (Protegiendo la primera columna)
   const headersHtml = headers.map((h, i) => `
     <th>
       <div class="col-head">
         <span class="col-name" contenteditable="true" 
           onblur="renameColumn('${t.id}', ${i}, this.textContent)"
           onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${escapeHtml(h)}</span>
+        
+        ${i > 0 ? `
         <span class="col-actions">
           <button class="del material-icons-round" title="Eliminar columna" onclick="askDeleteColumn('${t.id}', ${i}, '${escapeHtml(h)}')">delete_outline</button>
         </span>
+        ` : ''}
+
       </div>
     </th>
   `).join("") + `<th style="width:140px; text-align:center;">Acción</th>`;
