@@ -191,13 +191,10 @@ function renderTableCard(t) {
   
   const headersHtml = headers.map((h, i) => `
     <th>
-      <div class="col-head">
-        <span class="col-name" contenteditable="true" 
-          onblur="renameColumn('${t.id}', ${i}, this.textContent)"
-          onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${escapeHtml(h)}</span>
-        <span class="col-actions">
-          <button class="del material-icons-round" title="Eliminar columna" onclick="askDeleteColumn('${t.id}', ${i}, '${escapeHtml(h)}')">delete_outline</button>
-        </span>
+      <div class="title" style="cursor:pointer;" onclick="renameTablePrompt('${t.id}', '${escapeHtml(t.title)}')">
+        <span class="material-icons-round" style="color:var(--primary)">table_chart</span> 
+        ${escapeHtml(t.title)}
+        <span class="material-icons-round" style="font-size: 1rem; color: var(--text-muted); margin-left: 5px;" title="Editar Título">edit</span>
       </div>
     </th>
   `).join("") + `<th style="width:140px; text-align:center;">Acción</th>`;
@@ -295,8 +292,14 @@ async function toggleRowEdit(tableId, rowIndex, shouldSave) {
         const colIdx = +input.dataset.col;
         await updateCell(tableId, rowIndex, colIdx, input.value);
       }
-      state.savedRowsStatus[rowKey] = true;
-      toast("Fila guardada y bloqueada", "success");
+      
+      // NUEVO: Ordenar filas en el backend automáticamente tras guardar
+      await apiCall("sortRows", { themeId: state.currentTheme.id, tableId });
+      
+      // NUEVO: Recargar las tablas para reflejar el nuevo orden alfabético
+      await loadTables(); 
+      
+      toast("Fila guardada y tabla ordenada", "success");
     } catch(e) {
       toast("Error al guardar fila", "error");
     } finally {
@@ -304,18 +307,13 @@ async function toggleRowEdit(tableId, rowIndex, shouldSave) {
     }
   } else {
     state.savedRowsStatus[rowKey] = false;
-  }
-  
-  renderTables();
-  
-  if (!shouldSave) {
+    renderTables();
     setTimeout(() => {
       const dynamicInput = $(`.cell-input[data-tbl="${tableId}"][data-row="${rowIndex}"]`);
       if (dynamicInput) { dynamicInput.focus(); }
     }, 50);
   }
 }
-
 /* Mover filas arriba o abajo */
 async function moveRow(tableId, rowIndex, direction) {
   const t = state.tables.find(x => x.id === tableId);
@@ -690,3 +688,55 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 });
+/* =========================================================
+   NUEVAS FUNCIONES DE EDICIÓN RÁPIDA (Temas y Tablas)
+   ========================================================= */
+async function editCurrentTheme() {
+  const newName = prompt("Edita el nombre del tema:", state.currentTheme.name);
+  if (!newName || newName.trim() === "") return;
+  
+  const newEmoji = prompt("Edita el emoji:", state.currentTheme.emoji);
+  
+  showLoading(true);
+  try {
+    await apiCall("editTheme", { 
+      themeId: state.currentTheme.id, 
+      name: newName.trim(), 
+      emoji: newEmoji || "📖" 
+    });
+    
+    // Actualizar estado local y UI
+    state.currentTheme.name = newName.trim();
+    state.currentTheme.emoji = newEmoji || "📖";
+    $("#themeName").textContent = state.currentTheme.name;
+    $("#themeEmoji").textContent = state.currentTheme.emoji;
+    
+    // Refrescar el listado general en background
+    loadThemes(); 
+    toast("Tema actualizado con éxito", "success");
+  } catch(e) { 
+    toast("Error al editar el tema: " + e.message, "error"); 
+  } finally { 
+    showLoading(false); 
+  }
+}
+
+async function renameTablePrompt(tableId, currentTitle) {
+  const newTitle = prompt("Nuevo título para la tabla:", currentTitle);
+  if (!newTitle || newTitle.trim() === currentTitle) return;
+  
+  showLoading(true);
+  try {
+    await apiCall("renameTable", { 
+      themeId: state.currentTheme.id, 
+      tableId, 
+      title: newTitle.trim() 
+    });
+    await loadTables();
+    toast("Tabla renombrada", "success");
+  } catch(e) { 
+    toast("Error al renombrar: " + e.message, "error"); 
+  } finally { 
+    showLoading(false); 
+  }
+}
