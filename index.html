@@ -182,5 +182,101 @@
 
   <script src="config.js"></script>
   <script src="app.js"></script>
+  <script>
+/* ===== Corrector visual (iconos + tarjetas). No toca lógica. ===== */
+(function () {
+  // Nombres de ligadura válidos: si un elemento contiene solo este texto,
+  // se le aplica la fuente de iconos (el texto se convierte en glifo solo).
+  var ICONS = ("add add_circle add_box delete delete_outline delete_forever edit edit_note " +
+    "arrow_upward arrow_downward arrow_back arrow_forward arrow_drop_up arrow_drop_down " +
+    "close cancel search keyboard save check check_circle table_chart grid_on grid_view " +
+    "view_list list more_vert more_horiz visibility visibility_off download file_download " +
+    "upload file_upload content_copy content_paste drag_indicator language open_in_new " +
+    "refresh sync settings info warning error help menu home star favorite bookmark share " +
+    "print folder description article code data_object functions calculate post_add " +
+    "playlist_add library_add note_add remove clear done undo redo expand_more expand_less " +
+    "chevron_right chevron_left first_page last_page keyboard_arrow_up keyboard_arrow_down " +
+    "keyboard_double_arrow_up keyboard_double_arrow_down text_fields title low_priority " +
+    "swap_vert swap_horiz sort move_up move_down upgrade").split(" ");
+  var SET = {}; ICONS.forEach(function (n) { SET[n] = 1; });
+
+  // Palabras en español -> glifo por codepoint (texto oculto con CSS, DOM intacto)
+  var WORDS = {
+    "editar": "\ue3c9", "eliminar": "\ue872", "borrar": "\ue872", "quitar": "\ue872",
+    "subir": "\ue5d8", "bajar": "\ue5db", "subir fila": "\ue5d8", "bajar fila": "\ue5db",
+    "añadir": "\ue145", "anadir": "\ue145", "agregar": "\ue145",
+    "guardar": "\ue161", "cerrar": "\ue5cd", "cancelar": "\ue5cd", "buscar": "\ue8b6"
+  };
+  var TRASH = /\u{1F5D1}(\uFE0F|\u200D)?/u;
+
+  function ownText(el) {
+    var t = "", n = el.firstChild;
+    while (n) { if (n.nodeType === 3) t += n.textContent; n = n.nextSibling; }
+    return t.trim();
+  }
+  function iconFont(el) {
+    el.style.setProperty("font-family", "'Material Icons Round'", "important");
+    el.style.setProperty("font-weight", "normal", "important");
+    el.style.setProperty("font-style", "normal", "important");
+    el.style.setProperty("text-transform", "none", "important");
+    el.style.setProperty("letter-spacing", "normal", "important");
+    el.style.setProperty("font-feature-settings", "'liga'", "important");
+    el.style.setProperty("line-height", "1", "important");
+  }
+  function fixIcons() {
+    document.querySelectorAll("body *").forEach(function (el) {
+      if (el.dataset && el.dataset.fx) return;
+      if (el.closest && el.closest("pre,code,textarea,input,select,[contenteditable]")) return;
+      if (el.children.length) return;
+      var t = ownText(el); if (!t) return;
+      var low = t.toLowerCase();
+      if (SET[low]) { el.dataset.fx = "i"; iconFont(el); return; }
+      if (WORDS[low]) {
+        el.dataset.fx = "w";
+        el.classList.add("fx-ic");
+        el.style.setProperty("--fxcp", '"' + WORDS[low] + '"');
+        return;
+      }
+      if (TRASH.test(t) && t.replace(TRASH, "").trim() === "") {
+        el.dataset.fx = "w";
+        el.classList.add("fx-ic");
+        el.style.setProperty("--fxcp", '"\\e872"');
+      }
+    });
+  }
+
+  // Tarjetas: emoji grande, nombre bonito, UN control de borrado arriba-derecha
+  var PICT = /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{1F1E6}-\u{1F1FF}\u{2B00}-\u{2BFF}]/u;
+  var grid = document.getElementById("themesGrid");
+  function tuneCards() {
+    if (!grid) return;
+    grid.querySelectorAll(":scope > *").forEach(function (card) {
+      if (card.dataset.fxCard) return;
+      card.dataset.fxCard = "1";
+      var del = null, named = false;
+      card.querySelectorAll("*").forEach(function (el) {
+        if (del && del.contains(el)) return;
+        var cls = el.getAttribute("class") || "";
+        var txt = ownText(el);
+        if (/delete|trash|\u{1F5D1}|borrar|elimin|remov/i.test(txt + " " + cls)) {
+          var host = el.closest("button") || el;
+          if (!del) { del = host; host.classList.add("fx-del"); }
+          return;
+        }
+        if (el.children.length) return;
+        if (txt && txt.length <= 8 && PICT.test(txt)) { el.classList.add("fx-emoji"); return; }
+        if (!named && txt) { el.classList.add("fx-name"); named = true; }
+      });
+    });
+  }
+
+  var pend = false;
+  new MutationObserver(function () {
+    if (pend) return; pend = true;
+    requestAnimationFrame(function () { pend = false; fixIcons(); tuneCards(); });
+  }).observe(document.documentElement, { childList: true, subtree: true });
+  fixIcons(); tuneCards();
+})();
+</script>
 </body>
 </html>
