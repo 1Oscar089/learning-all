@@ -4,11 +4,316 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tablas de Aprendizaje</title>
-  <link rel="stylesheet" href="styles.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <!-- Icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..700;1,9..144,400..700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+  <style>
+    /* ============ Base ============ */
+    * { margin:0; padding:0; box-sizing:border-box; }
+    [hidden] { display:none !important; }
+    button { font-family:inherit; }
+    :root {
+      --paper:#F6F3EC; --paper-2:#FCFBF7;
+      --ink:#211E19; --ink-2:#6B6459;
+      --line:#E6E0D3; --line-strong:#CFC6B4;
+      --accent:#B23A2E; --accent-ink:#8E2E24; --accent-tint:#F5E7E1;
+      --rule:rgba(33,30,25,.05);
+    }
+    ::selection { background:var(--accent); color:#FFF6F0; }
+    :focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+    html { scroll-behavior:smooth; }
+    body {
+      font-family:'Inter',sans-serif; color:var(--ink); min-height:100vh;
+      -webkit-font-smoothing:antialiased;
+      /* Renglones de cuaderno, muy tenues */
+      background:repeating-linear-gradient(to top, transparent 0 31px, var(--rule) 31px 32px), var(--paper);
+    }
+    /* Margen rojo de cuaderno (solo escritorio) */
+    body::after {
+      content:""; position:fixed; top:0; bottom:0; left:56px; width:1px;
+      background:var(--accent); opacity:.14; pointer-events:none;
+    }
+    @media (max-width:900px){ body::after{ display:none; } }
+    ::-webkit-scrollbar { width:10px; height:10px; }
+    ::-webkit-scrollbar-thumb { background:var(--line-strong); border-radius:6px; border:2px solid var(--paper); }
+
+    /* ============ Header ============ */
+    .app-header {
+      position:sticky; top:0; z-index:50;
+      background:rgba(246,243,236,.86); backdrop-filter:blur(12px);
+      border-bottom:1px solid var(--line);
+    }
+    .header-inner {
+      max-width:1120px; margin:0 auto; padding:14px 24px;
+      display:flex; align-items:center; justify-content:space-between; gap:16px;
+    }
+    .brand { display:flex; align-items:center; gap:14px; min-width:0; }
+    .brand-mark {
+      width:42px; height:42px; flex:none; display:grid; place-items:center;
+      border:1px solid var(--ink); border-radius:10px; background:var(--paper-2); color:var(--ink);
+    }
+    .brand h1 { font-family:'Fraunces',serif; font-size:19px; font-weight:600; letter-spacing:-.01em; }
+    .brand .subtitle { font-size:12.5px; color:var(--ink-2); margin-top:1px; }
+    .header-actions { display:flex; align-items:center; gap:10px; flex:none; }
+    a { text-decoration:none; color:inherit; }
+
+    /* ============ Botones ============ */
+    .btn {
+      display:inline-flex; align-items:center; gap:7px;
+      font-size:13.5px; font-weight:600; padding:9px 16px;
+      border-radius:9px; border:1px solid transparent; cursor:pointer;
+      transition:all .18s ease; white-space:nowrap;
+    }
+    .btn .material-icons-round { font-size:17px; }
+    .btn-primary { background:var(--ink); color:var(--paper-2); }
+    .btn-primary:hover { background:var(--accent); transform:translateY(-1px); box-shadow:0 10px 22px -10px rgba(33,30,25,.5); }
+    .btn-ghost { background:transparent; border-color:var(--line-strong); color:var(--ink); }
+    .btn-ghost:hover { border-color:var(--ink); background:var(--paper-2); }
+    .btn-danger { background:var(--accent); color:#FFF6F0; }
+    .btn-danger:hover { background:var(--accent-ink); }
+    .btn-sm { padding:6px 10px; }
+    .icon-btn {
+      width:32px; height:32px; display:inline-grid; place-items:center;
+      border:1px solid var(--line); border-radius:8px; background:transparent;
+      color:var(--ink-2); cursor:pointer; transition:all .15s ease;
+    }
+    .icon-btn .material-icons-round { font-size:17px; }
+    .icon-btn:hover { border-color:var(--accent); color:var(--accent); background:var(--accent-tint); }
+
+    /* ============ Layout principal ============ */
+    .app-main { max-width:1120px; margin:0 auto; padding:44px 24px 110px; position:relative; z-index:1; }
+    .view { display:none; }
+    .view.active { display:block; animation:fadeUp .3s ease; }
+    @keyframes fadeUp { from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:none;} }
+
+    .section-head {
+      display:flex; align-items:baseline; justify-content:space-between;
+      margin-bottom:6px; padding-bottom:12px; border-bottom:1.5px solid var(--ink);
+    }
+    .section-head h3 {
+      font-size:11.5px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-2);
+    }
+    .section-head .count { font-family:'Fraunces',serif; font-style:italic; font-size:14px; color:var(--ink-2); }
+
+    /* ============ Índice de temas ============ */
+    .theme-row {
+      display:grid; grid-template-columns:44px 54px minmax(0,1fr) auto 26px;
+      align-items:center; gap:18px; padding:18px 10px;
+      border-bottom:1px solid var(--line); cursor:pointer; transition:background .15s ease;
+    }
+    .theme-row:first-child { border-top:1px solid var(--line); }
+    .theme-row:hover { background:var(--paper-2); }
+    .theme-index {
+      font-family:'Fraunces',serif; font-style:italic; font-size:15px;
+      color:var(--line-strong); transition:color .15s;
+    }
+    .theme-row:hover .theme-index { color:var(--accent); }
+    .theme-emoji {
+      width:52px; height:52px; display:grid; place-items:center; font-size:24px; line-height:1;
+      border:1px solid var(--line-strong); border-radius:12px; background:var(--paper-2);
+    }
+    .theme-main { min-width:0; }
+    .theme-name {
+      font-family:'Fraunces',serif; font-size:21px; font-weight:600; letter-spacing:-.01em;
+      overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    }
+    .theme-meta { font-size:12.5px; color:var(--ink-2); margin-top:3px; }
+    .theme-actions { display:flex; gap:7px; opacity:0; transition:opacity .15s; }
+    .theme-row:hover .theme-actions { opacity:1; }
+    @media (hover:none){ .theme-actions { opacity:1; } }
+    .row-arrow { color:var(--line-strong); transition:all .18s; }
+    .theme-row:hover .row-arrow { color:var(--accent); transform:translateX(4px); }
+
+    /* ============ Estado vacío ============ */
+    .empty-state {
+      max-width:480px; margin:56px auto 0; text-align:center;
+      padding:56px 36px; border:1px solid var(--line); border-radius:18px; background:var(--paper-2);
+    }
+    .empty-state svg { color:var(--ink); margin-bottom:20px; }
+    .empty-state h2 { font-family:'Fraunces',serif; font-size:27px; font-weight:600; margin-bottom:10px; }
+    .empty-state p { color:var(--ink-2); font-size:14.5px; line-height:1.6; margin-bottom:24px; }
+    .empty-actions { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+
+    /* ============ Vista de tema ============ */
+    .back-btn { margin-bottom:30px; }
+    .theme-header {
+      display:flex; align-items:center; gap:20px; flex-wrap:wrap;
+      margin-bottom:40px; padding-bottom:26px; border-bottom:1px solid var(--line);
+    }
+    .theme-header .theme-emoji { width:64px; height:64px; font-size:30px; border-radius:14px; }
+    .theme-header h2 { font-family:'Fraunces',serif; font-size:38px; font-weight:600; letter-spacing:-.02em; }
+    .theme-header .theme-meta { margin-top:4px; }
+    .tables-section-head {
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+      padding-bottom:12px; border-bottom:1.5px solid var(--ink); margin-bottom:24px;
+    }
+    .tables-section-head h3 {
+      font-size:11.5px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-2);
+    }
+
+    /* ============ Tarjetas de tabla ============ */
+    .table-card {
+      border:1px solid var(--line); border-radius:14px; background:var(--paper-2);
+      overflow:hidden; margin-bottom:22px; box-shadow:0 1px 0 rgba(33,30,25,.03);
+    }
+    .table-card-head {
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+      padding:15px 20px; border-bottom:1px solid var(--line);
+    }
+    .table-card-head h4 { font-family:'Fraunces',serif; font-size:19px; font-weight:600; }
+    .table-actions { display:flex; gap:7px; }
+    .table-scroll { overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; }
+    thead th {
+      text-align:left; font-size:10.5px; font-weight:700; letter-spacing:.12em; text-transform:uppercase;
+      color:var(--ink-2); padding:11px 16px; border-bottom:1.5px solid var(--ink); background:var(--paper);
+    }
+    tbody td { padding:11px 16px; border-bottom:1px solid var(--line); font-size:14.5px; }
+    tbody tr { transition:background .12s; }
+    tbody tr:hover { background:var(--paper); }
+    td[contenteditable] { min-width:90px; cursor:text; }
+    td[contenteditable]:empty::before { content:'—'; color:var(--line-strong); }
+    td[contenteditable]:focus {
+      outline:none; background:var(--accent-tint);
+      box-shadow:inset 0 0 0 1.5px var(--accent); border-radius:2px;
+    }
+    .rownum { width:44px; text-align:center; font-family:'Fraunces',serif; font-style:italic; font-size:13px; color:var(--line-strong); user-select:none; }
+    .row-tools { width:44px; text-align:center; }
+    .row-del {
+      border:0; background:none; cursor:pointer; color:var(--ink-2);
+      opacity:0; transition:all .15s; vertical-align:middle; padding:3px; border-radius:6px;
+    }
+    .row-del .material-icons-round { font-size:16px; }
+    tbody tr:hover .row-del { opacity:.7; }
+    .row-del:hover { opacity:1 !important; color:var(--accent); background:var(--accent-tint); }
+    .add-row-btn {
+      width:100%; display:flex; align-items:center; justify-content:center; gap:6px;
+      padding:11px; border:0; border-top:1px dashed var(--line-strong);
+      background:none; color:var(--ink-2); font-size:13px; font-weight:600; cursor:pointer;
+      transition:all .15s;
+    }
+    .add-row-btn .material-icons-round { font-size:16px; }
+    .add-row-btn:hover { color:var(--accent); background:var(--accent-tint); }
+    .tables-empty {
+      border:1px dashed var(--line-strong); border-radius:14px; padding:48px 24px;
+      text-align:center; color:var(--ink-2); font-size:14px;
+    }
+    .tables-empty .material-icons-round { font-size:32px; color:var(--line-strong); display:block; margin:0 auto 12px; }
+
+    /* ============ Modales ============ */
+    .modal-overlay {
+      position:fixed; inset:0; z-index:100; padding:20px;
+      display:grid; place-items:center;
+      background:rgba(26,23,19,.45); backdrop-filter:blur(5px);
+      opacity:0; transition:opacity .2s ease;
+    }
+    .modal-overlay.open { opacity:1; }
+    .modal {
+      width:100%; max-width:440px; background:var(--paper-2);
+      border:1px solid var(--line-strong); border-radius:16px;
+      box-shadow:0 32px 80px -24px rgba(26,23,19,.45);
+      transform:translateY(14px) scale(.98); transition:transform .22s cubic-bezier(.2,.8,.3,1);
+    }
+    .modal-overlay.open .modal { transform:none; }
+    .modal-lg { max-width:560px; } .modal-sm { max-width:380px; }
+    .modal-head { display:flex; align-items:center; justify-content:space-between; padding:22px 26px 0; }
+    .modal-head h3 { font-family:'Fraunces',serif; font-size:22px; font-weight:600; }
+    .modal-close {
+      border:0; background:none; cursor:pointer; color:var(--ink-2);
+      width:32px; height:32px; display:grid; place-items:center; border-radius:8px;
+    }
+    .modal-close:hover { color:var(--accent); background:var(--accent-tint); }
+    .modal-body { padding:22px 26px; }
+    .modal-foot { display:flex; justify-content:flex-end; gap:10px; padding:0 26px 24px; }
+    .modal-body p { font-size:14.5px; line-height:1.6; color:var(--ink-2); }
+    .form-grid { display:grid; grid-template-columns:1.7fr .8fr; gap:14px; }
+    .field { display:block; margin-bottom:16px; }
+    .field > span {
+      display:block; font-size:10.5px; font-weight:700; letter-spacing:.13em;
+      text-transform:uppercase; color:var(--ink-2); margin-bottom:7px;
+    }
+    input[type="text"], input[type="number"], select {
+      width:100%; padding:10px 13px; font:400 14.5px 'Inter',sans-serif; color:var(--ink);
+      background:var(--paper); border:1px solid var(--line-strong); border-radius:9px;
+      transition:border-color .15s, box-shadow .15s;
+    }
+    input:focus, select:focus { outline:none; border-color:var(--ink); box-shadow:0 0 0 3px rgba(33,30,25,.08); }
+    .headers-list { display:grid; grid-template-columns:repeat(auto-fill, minmax(140px,1fr)); gap:10px; }
+
+    /* ============ Teclado virtual ============ */
+    .virtual-keyboard {
+      position:fixed; right:24px; bottom:24px; z-index:90;
+      width:min(680px, calc(100vw - 48px));
+      background:var(--paper-2); border:1px solid var(--line-strong); border-radius:16px;
+      box-shadow:0 28px 70px -18px rgba(26,23,19,.4); overflow:hidden;
+    }
+    .virtual-keyboard:not(.hidden) { animation:rise .3s cubic-bezier(.2,.9,.3,1.15); }
+    @keyframes rise { from{opacity:0; transform:translateY(24px);} to{opacity:1; transform:none;} }
+    .vk-header {
+      display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+      padding:12px 14px; border-bottom:1px solid var(--line);
+    }
+    .vk-title-group { display:flex; align-items:center; gap:8px; color:var(--ink); }
+    .vk-title-group .material-icons-round { font-size:19px; color:var(--accent); }
+    .vk-title { font-family:'Fraunces',serif; font-size:15px; font-weight:600; }
+    .vk-select { width:auto; min-width:160px; padding:7px 10px; font-size:13px; flex:1; }
+    .vk-drag-handle { cursor:grab; color:var(--line-strong); user-select:none; touch-action:none; }
+    .vk-drag-handle:active { cursor:grabbing; }
+    .vk-drag-handle:hover { color:var(--ink); }
+    .vk-close {
+      border:0; background:none; cursor:pointer; color:var(--ink-2);
+      width:32px; height:32px; display:grid; place-items:center; border-radius:8px;
+    }
+    .vk-close:hover { color:var(--accent); background:var(--accent-tint); }
+    .vk-search-container { position:relative; padding:10px 14px; border-bottom:1px solid var(--line); }
+    .vk-search-container .search-icon {
+      position:absolute; left:26px; top:50%; transform:translateY(-50%);
+      font-size:18px; color:var(--line-strong); pointer-events:none;
+    }
+    .vk-search-container input { padding-left:38px; background:var(--paper-2); }
+    .vk-keys {
+      display:grid; grid-template-columns:repeat(auto-fill, minmax(46px,1fr)); gap:7px;
+      padding:14px; max-height:290px; overflow-y:auto;
+    }
+    .vk-key {
+      height:44px; font-size:17px; color:var(--ink);
+      background:var(--paper); border:1px solid var(--line); border-radius:9px;
+      cursor:pointer; transition:all .12s; line-height:1;
+    }
+    .vk-key:hover { border-color:var(--ink); transform:translateY(-1px); box-shadow:0 4px 10px -4px rgba(33,30,25,.3); }
+    .vk-key:active { transform:none; background:var(--accent-tint); border-color:var(--accent); color:var(--accent); }
+    .vk-empty { grid-column:1/-1; text-align:center; color:var(--ink-2); font-size:13.5px; padding:20px 0; }
+
+    /* ============ Toast y carga ============ */
+    .toast {
+      position:fixed; left:50%; bottom:28px; z-index:200;
+      display:flex; align-items:center; gap:9px;
+      background:var(--ink); color:var(--paper); font-size:13.5px; font-weight:500;
+      padding:12px 18px; border-radius:12px; pointer-events:none;
+      box-shadow:0 18px 44px -12px rgba(0,0,0,.45);
+      opacity:0; transform:translate(-50%, 80px);
+      transition:all .32s cubic-bezier(.2,.9,.3,1.1);
+    }
+    .toast.show { opacity:1; transform:translate(-50%, 0); }
+    .toast .material-icons-round { font-size:18px; color:#D9A49A; }
+    .loading { position:fixed; inset:0; z-index:300; display:grid; place-items:center; background:rgba(246,243,236,.7); }
+    .spinner { width:34px; height:34px; border:2.5px solid var(--line-strong); border-top-color:var(--ink); border-radius:50%; animation:spin .8s linear infinite; }
+    @keyframes spin { to{ transform:rotate(360deg); } }
+
+    /* ============ Responsive ============ */
+    @media (max-width:760px) {
+      .brand .subtitle, .btn-text { display:none; }
+      .header-inner { padding:12px 16px; }
+      .app-main { padding:28px 16px 90px; }
+      .theme-row { grid-template-columns:44px minmax(0,1fr) auto; gap:12px; }
+      .theme-index, .row-arrow { display:none; }
+      .theme-emoji { width:44px; height:44px; font-size:20px; }
+      .theme-name { font-size:18px; white-space:normal; }
+      .theme-header h2 { font-size:28px; }
+      .form-grid { grid-template-columns:1fr; }
+      .virtual-keyboard { left:12px; right:12px; bottom:12px; width:auto; }
+    }
+  </style>
 </head>
 <body>
   <div class="app-wrapper">
@@ -16,21 +321,27 @@
     <header class="app-header">
       <div class="header-inner">
         <div class="brand">
-          <span class="brand-emoji">📚</span>
+          <span class="brand-mark">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 6c-2-1.5-4.5-2-8-2v14c3.5 0 6 .5 8 2 2-1.5 4.5-2 8-2V4c-3.5 0-6 .5-8 2z"/><path d="M12 6v14"/>
+            </svg>
+          </span>
           <div>
             <h1>Tablas de Aprendizaje</h1>
-            <p class="subtitle">Crea temas, organiza tablas y aprende lo que quieras con soporte multilenguaje.</p>
+            <p class="subtitle">Organiza tus tablas de estudio con soporte multilenguaje.</p>
           </div>
         </div>
         <div class="header-actions">
-          <button id="btnToggleKeyboard" class="btn btn-ghost" title="Mostrar/Ocultar Teclado Virtual">
+          <button id="btnToggleKeyboard" class="btn btn-ghost" title="Mostrar/Ocultar teclado virtual">
             <span class="material-icons-round">keyboard</span>
             <span class="btn-text">Teclado Virtual</span>
           </button>
           <button id="btnNewTheme" class="btn btn-primary">
             <span class="material-icons-round">add</span> Nuevo tema
           </button>
-          <a href="https://1oscar089.github.io/Directorio-de-Sitios/" target="_blank"><button class="btn btn-primary"> Apuntes </button></a>
+          <a href="https://1oscar089.github.io/Directorio-de-Sitios/" target="_blank" rel="noopener">
+            <button class="btn btn-ghost">Apuntes <span class="material-icons-round" style="font-size:15px">open_in_new</span></button>
+          </a>
         </div>
       </div>
     </header>
@@ -39,11 +350,23 @@
     <main class="app-main">
       <!-- Vista de temas -->
       <section id="viewThemes" class="view active">
-        <div id="emptyState" class="empty-state">
-          <div class="empty-emoji">🗂️</div>
+        <div id="emptyState" class="empty-state" hidden>
+          <svg width="72" height="72" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="8" y="6" width="32" height="36" rx="3"/>
+            <path d="M15 15h18M15 21h18M15 27h11"/>
+            <circle cx="33" cy="33" r="6" stroke="#B23A2E"/>
+            <path d="M30.5 33l2 2 3.5-4" stroke="#B23A2E"/>
+          </svg>
           <h2>Aún no hay temas</h2>
-          <p>Crea tu primer tema para empezar a organizar tus tablas de aprendizaje.</p>
-          <button class="btn btn-primary" onclick="document.getElementById('btnNewTheme').click()">Crear primer tema</button>
+          <p>Crea tu primer tema para empezar a organizar tus tablas de aprendizaje: vocabulario, caracteres, fórmulas… lo que quieras.</p>
+          <div class="empty-actions">
+            <button class="btn btn-primary" onclick="document.getElementById('btnNewTheme').click()">Crear primer tema</button>
+            <button class="btn btn-ghost" onclick="loadDemo()"><span class="material-icons-round">auto_stories</span> Ver con datos de ejemplo</button>
+          </div>
+        </div>
+        <div id="themesIndexHead" class="section-head" hidden>
+          <h3>Índice de temas</h3>
+          <span class="count" id="themesCount"></span>
         </div>
         <div id="themesGrid" class="themes-grid"></div>
       </section>
@@ -51,18 +374,21 @@
       <!-- Vista de un tema -->
       <section id="viewTheme" class="view">
         <button class="btn btn-ghost back-btn" onclick="showThemes()">
-          <span class="material-icons-round">arrow_back</span> Volver a temas
+          <span class="material-icons-round">arrow_back</span> Volver al índice
         </button>
         <div class="theme-header">
           <span id="themeEmoji" class="theme-emoji">📖</span>
-          <h2 id="themeName">Tema</h2>
-          <button class="btn btn-ghost btn-sm" onclick="editCurrentTheme()" title="Editar Tema">
+          <div style="flex:1; min-width:0;">
+            <h2 id="themeName">Tema</h2>
+            <p class="theme-meta" id="themeMeta"></p>
+          </div>
+          <button class="icon-btn" onclick="editCurrentTheme()" title="Editar tema" style="width:38px;height:38px;">
             <span class="material-icons-round">edit</span>
           </button>
         </div>
         <div class="tables-section">
           <div class="tables-section-head">
-            <h3>Tus Tablas</h3>
+            <h3>Tus tablas</h3>
             <button id="btnNewTable" class="btn btn-primary">
               <span class="material-icons-round">add_circle</span> Nueva tabla
             </button>
@@ -73,7 +399,7 @@
     </main>
   </div>
 
-  <!-- Teclado Virtual Avanzado / Multilenguaje -->
+  <!-- Teclado Virtual -->
   <div id="virtualKeyboard" class="virtual-keyboard hidden">
     <div class="vk-header">
       <div class="vk-title-group">
@@ -98,13 +424,12 @@
           <option value="accents">Acentos Especiales</option>
         </optgroup>
       </select>
-      <div class="vk-drag-handle material-icons-round" title="Arrastrar teclado">drag_indicator</div>
-      <button class="vk-close material-icons-round" onclick="toggleVirtualKeyboard()">close</button>
+      <span class="material-icons-round vk-drag-handle" id="vkDragHandle" title="Arrastrar teclado">drag_indicator</span>
+      <button class="vk-close" onclick="toggleVirtualKeyboard()" title="Cerrar"><span class="material-icons-round">close</span></button>
     </div>
-    <!-- Buscador interno de símbolos rápidos -->
     <div class="vk-search-container">
       <span class="material-icons-round search-icon">search</span>
-      <input type="text" id="vkSearchInput" placeholder="Buscar símbolo (ej: alfa, k, integral)..." />
+      <input type="text" id="vkSearchInput" placeholder="Buscar símbolo (ej: ka, alfa, integral)..." />
     </div>
     <div id="vkKeysContainer" class="vk-keys"></div>
   </div>
@@ -114,17 +439,19 @@
     <div class="modal">
       <div class="modal-head">
         <h3>Nuevo tema</h3>
-        <button class="modal-close" onclick="closeModal('modalTheme')">×</button>
+        <button class="modal-close" onclick="closeModal('modalTheme')"><span class="material-icons-round">close</span></button>
       </div>
       <div class="modal-body">
-        <label class="field">
-          <span>Emoji</span>
-          <input type="text" id="themeEmojiInput" maxlength="4" placeholder="📖" />
-        </label>
-        <label class="field">
-          <span>Nombre del tema</span>
-          <input type="text" id="themeNameInput" placeholder="Ej: Vocabulario Asiático" />
-        </label>
+        <div class="form-grid" style="grid-template-columns:90px 1fr;">
+          <label class="field">
+            <span>Emoji</span>
+            <input type="text" id="themeEmojiInput" maxlength="4" placeholder="📖" />
+          </label>
+          <label class="field">
+            <span>Nombre del tema</span>
+            <input type="text" id="themeNameInput" placeholder="Ej: Vocabulario Asiático" />
+          </label>
+        </div>
       </div>
       <div class="modal-foot">
         <button class="btn btn-ghost" onclick="closeModal('modalTheme')">Cancelar</button>
@@ -137,7 +464,7 @@
     <div class="modal modal-lg">
       <div class="modal-head">
         <h3>Nueva tabla</h3>
-        <button class="modal-close" onclick="closeModal('modalTable')">×</button>
+        <button class="modal-close" onclick="closeModal('modalTable')"><span class="material-icons-round">close</span></button>
       </div>
       <div class="modal-body">
         <div class="form-grid">
@@ -146,12 +473,12 @@
             <input type="text" id="tableTitleInput" placeholder="Ej: Caracteres Básicos" />
           </label>
           <label class="field">
-            <span>Número de columnas</span>
+            <span>Columnas (1–10)</span>
             <input type="number" id="tableColsInput" min="1" max="10" value="3" />
           </label>
         </div>
         <div class="field">
-          <span>Encabezados (headers)</span>
+          <span>Encabezados</span>
           <div id="headersList" class="headers-list"></div>
         </div>
       </div>
@@ -166,13 +493,14 @@
     <div class="modal modal-sm">
       <div class="modal-head">
         <h3 id="confirmTitle">Confirmar</h3>
+        <button class="modal-close" onclick="closeModal('modalConfirm')"><span class="material-icons-round">close</span></button>
       </div>
       <div class="modal-body">
         <p id="confirmMessage">¿Estás seguro?</p>
       </div>
       <div class="modal-foot">
         <button class="btn btn-ghost" onclick="closeModal('modalConfirm')">Cancelar</button>
-        <button class="btn btn-danger" id="confirmAccept">Aceptar</button>
+        <button class="btn btn-danger" id="confirmAccept">Eliminar</button>
       </div>
     </div>
   </div>
@@ -180,7 +508,365 @@
   <div id="toast" class="toast" hidden></div>
   <div id="loading" class="loading" hidden><div class="spinner"></div></div>
 
-  <script src="config.js"></script>
-  <script src="app.js"></script>
+  <script>
+  /* =====================================================
+     Lógica de la aplicación (mantiene la misma estructura
+     de funciones e IDs que tu app.js original)
+  ===================================================== */
+
+  // ---------- Utilidades ----------
+  const $ = s => document.querySelector(s);
+  const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  const esc = s => (s ?? '').toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const fmtDate = ts => new Intl.DateTimeFormat('es', { day:'numeric', month:'short' }).format(ts);
+
+  // ---------- Datos / persistencia ----------
+  const LS_KEY = 'tablas-aprendizaje-v2';
+  let db = { themes: [] };
+  try { db = JSON.parse(localStorage.getItem(LS_KEY)) || db; } catch(e) {}
+  const save = () => { try { localStorage.setItem(LS_KEY, JSON.stringify(db)); } catch(e) {} };
+
+  let currentThemeId = null, editingThemeId = null, confirmCb = null, lastField = null;
+
+  // ---------- Vistas ----------
+  function showView(id) {
+    document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === id));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  function showThemes() { currentThemeId = null; renderThemes(); showView('viewThemes'); }
+  function openTheme(id) { currentThemeId = id; renderThemeView(); showView('viewTheme'); }
+
+  // ---------- Render: índice de temas ----------
+  function renderThemes() {
+    const grid = $('#themesGrid'), empty = $('#emptyState'), head = $('#themesIndexHead');
+    if (!db.themes.length) {
+      empty.hidden = false; head.hidden = true; grid.innerHTML = '';
+      return;
+    }
+    empty.hidden = true; head.hidden = false;
+    $('#themesCount').textContent = db.themes.length === 1 ? 'un tema' : db.themes.length + ' temas';
+    grid.innerHTML = db.themes.map((t, i) => `
+      <article class="theme-row" data-id="${t.id}">
+        <span class="theme-index">${String(i + 1).padStart(2, '0')}</span>
+        <span class="theme-emoji">${esc(t.emoji || '📖')}</span>
+        <div class="theme-main">
+          <h3 class="theme-name">${esc(t.name)}</h3>
+          <p class="theme-meta">${t.tables.length} ${t.tables.length === 1 ? 'tabla' : 'tablas'} · ${fmtDate(t.createdAt)}</p>
+        </div>
+        <div class="theme-actions">
+          <button class="icon-btn" data-taction="edit" title="Editar tema"><span class="material-icons-round">edit</span></button>
+          <button class="icon-btn" data-taction="delete" title="Eliminar tema"><span class="material-icons-round">delete_outline</span></button>
+        </div>
+        <span class="material-icons-round row-arrow">arrow_forward</span>
+      </article>`).join('');
+  }
+
+  $('#themesGrid').addEventListener('click', e => {
+    const row = e.target.closest('.theme-row'); if (!row) return;
+    const theme = db.themes.find(t => t.id === row.dataset.id); if (!theme) return;
+    const act = e.target.closest('[data-taction]');
+    if (act) {
+      if (act.dataset.taction === 'edit') openThemeModal(theme);
+      else confirmDialog('Eliminar tema',
+        `Se eliminará «${theme.name}» y todas sus tablas. Esta acción no se puede deshacer.`,
+        () => { db.themes = db.themes.filter(t => t.id !== theme.id); save(); renderThemes(); showToast('Tema eliminado', 'delete_outline'); });
+      return;
+    }
+    openTheme(theme.id);
+  });
+
+  // ---------- Render: vista de un tema ----------
+  function renderThemeView() {
+    const t = db.themes.find(x => x.id === currentThemeId);
+    if (!t) return showThemes();
+    $('#themeEmoji').textContent = t.emoji || '📖';
+    $('#themeName').textContent = t.name;
+    $('#themeMeta').textContent = `${t.tables.length} ${t.tables.length === 1 ? 'tabla' : 'tablas'} · creada el ${fmtDate(t.createdAt)}`;
+    renderTables();
+  }
+
+  function renderTables() {
+    const theme = db.themes.find(x => x.id === currentThemeId);
+    const c = $('#tablesContainer');
+    if (!theme.tables.length) {
+      c.innerHTML = `<div class="tables-empty"><span class="material-icons-round">table_chart</span>Este tema todavía no tiene tablas. Usa «Nueva tabla» para añadir la primera.</div>`;
+      return;
+    }
+    c.innerHTML = theme.tables.map(tab => `
+      <article class="table-card" data-table-id="${tab.id}">
+        <header class="table-card-head">
+          <h4>${esc(tab.title)}</h4>
+          <div class="table-actions">
+            <button class="icon-btn" data-action="add-row" title="Añadir fila"><span class="material-icons-round">post_add</span></button>
+            <button class="icon-btn" data-action="del-table" title="Eliminar tabla"><span class="material-icons-round">delete_outline</span></button>
+          </div>
+        </header>
+        <div class="table-scroll">
+          <table>
+            <thead><tr>
+              <th class="rownum">#</th>
+              ${tab.headers.slice(0, tab.cols).map(h => `<th>${esc(h)}</th>`).join('')}
+              <th class="row-tools"></th>
+            </tr></thead>
+            <tbody>
+              ${tab.rows.map((row, r) => `<tr data-r="${r}">
+                <td class="rownum">${r + 1}</td>
+                ${row.map((v, ci) => `<td contenteditable="true" spellcheck="false" data-cell="${r}-${ci}">${esc(v)}</td>`).join('')}
+                <td class="row-tools"><button class="row-del" data-action="del-row" title="Eliminar fila"><span class="material-icons-round">close</span></button></td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+        <button class="add-row-btn" data-action="add-row"><span class="material-icons-round">add</span> Añadir fila</button>
+      </article>`).join('');
+  }
+
+  // ---------- Edición de celdas (delegación) ----------
+  $('#tablesContainer').addEventListener('input', e => {
+    const td = e.target.closest('td[data-cell]'); if (!td) return;
+    const theme = db.themes.find(t => t.id === currentThemeId); if (!theme) return;
+    const table = theme.tables.find(t => t.id === td.closest('.table-card').dataset.tableId);
+    const [r, c] = td.dataset.cell.split('-').map(Number);
+    table.rows[r][c] = td.innerText;
+    save();
+  });
+
+  $('#tablesContainer').addEventListener('click', e => {
+    const btn = e.target.closest('[data-action]'); if (!btn) return;
+    const card = btn.closest('.table-card');
+    const theme = db.themes.find(t => t.id === currentThemeId); if (!theme || !card) return;
+    const table = theme.tables.find(t => t.id === card.dataset.tableId);
+    switch (btn.dataset.action) {
+      case 'add-row':
+        table.rows.push(Array(table.cols).fill(''));
+        save(); renderTables();
+        break;
+      case 'del-row':
+        table.rows.splice(+btn.closest('tr').dataset.r, 1);
+        save(); renderTables();
+        break;
+      case 'del-table':
+        confirmDialog('Eliminar tabla', `Se eliminará la tabla «${table.title}» con todas sus filas.`,
+          () => { theme.tables = theme.tables.filter(t => t.id !== table.id); save(); renderTables(); renderThemeView(); showToast('Tabla eliminada', 'delete_outline'); });
+        break;
+    }
+  });
+
+  // ---------- Modales ----------
+  function openModal(id) {
+    const m = document.getElementById(id);
+    m.hidden = false;
+    requestAnimationFrame(() => m.classList.add('open'));
+  }
+  function closeModal(id) {
+    const m = document.getElementById(id);
+    m.classList.remove('open');
+    setTimeout(() => { m.hidden = true; }, 220);
+  }
+  document.querySelectorAll('.modal-overlay').forEach(ov =>
+    ov.addEventListener('click', e => { if (e.target === ov) closeModal(ov.id); }));
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') document.querySelectorAll('.modal-overlay:not([hidden])').forEach(m => closeModal(m.id));
+  });
+
+  function confirmDialog(title, msg, cb) {
+    $('#confirmTitle').textContent = title;
+    $('#confirmMessage').textContent = msg;
+    confirmCb = cb;
+    openModal('modalConfirm');
+  }
+  $('#confirmAccept').addEventListener('click', () => {
+    const cb = confirmCb; confirmCb = null;
+    closeModal('modalConfirm');
+    cb && cb();
+  });
+
+  // ---------- Temas: crear / editar ----------
+  $('#btnNewTheme').addEventListener('click', () => openThemeModal());
+
+  function openThemeModal(theme = null) {
+    editingThemeId = theme ? theme.id : null;
+    $('#modalTheme .modal-head h3').textContent = theme ? 'Editar tema' : 'Nuevo tema';
+    $('#modalTheme .modal-foot .btn-primary').textContent = theme ? 'Guardar cambios' : 'Crear tema';
+    $('#themeEmojiInput').value = theme ? (theme.emoji || '') : '';
+    $('#themeNameInput').value = theme ? theme.name : '';
+    openModal('modalTheme');
+    setTimeout(() => $('#themeNameInput').focus(), 140);
+  }
+  function editCurrentTheme() { openThemeModal(db.themes.find(t => t.id === currentThemeId)); }
+
+  function createTheme() {
+    const name = $('#themeNameInput').value.trim();
+    if (!name) { showToast('Ponle un nombre al tema', 'error_outline'); $('#themeNameInput').focus(); return; }
+    const emoji = $('#themeEmojiInput').value.trim() || '📖';
+    if (editingThemeId) {
+      const t = db.themes.find(t => t.id === editingThemeId);
+      t.name = name; t.emoji = emoji;
+      save(); closeModal('modalTheme');
+      renderThemes();
+      if (currentThemeId === editingThemeId) renderThemeView();
+      showToast('Tema actualizado');
+    } else {
+      const t = { id: uid(), emoji, name, createdAt: Date.now(), tables: [] };
+      db.themes.push(t);
+      save(); closeModal('modalTheme');
+      openTheme(t.id);
+      showToast('Tema creado');
+    }
+  }
+
+  // ---------- Tablas: crear ----------
+  function renderHeaderInputs() {
+    const n = Math.min(10, Math.max(1, +$('#tableColsInput').value || 3));
+    $('#tableColsInput').value = n;
+    $('#headersList').innerHTML = Array.from({ length: n }, (_, i) =>
+      `<input type="text" class="header-input" placeholder="Encabezado ${i + 1}" />`).join('');
+  }
+  $('#tableColsInput').addEventListener('input', renderHeaderInputs);
+
+  $('#btnNewTable').addEventListener('click', () => {
+    $('#tableTitleInput').value = '';
+    $('#tableColsInput').value = 3;
+    renderHeaderInputs();
+    openModal('modalTable');
+    setTimeout(() => $('#tableTitleInput').focus(), 140);
+  });
+
+  function createTable() {
+    const theme = db.themes.find(t => t.id === currentThemeId); if (!theme) return;
+    const title = $('#tableTitleInput').value.trim();
+    if (!title) { showToast('Ponle un título a la tabla', 'error_outline'); $('#tableTitleInput').focus(); return; }
+    const n = Math.min(10, Math.max(1, +$('#tableColsInput').value || 3));
+    const headers = [...document.querySelectorAll('.header-input')].map((h, i) => h.value.trim() || `Columna ${i + 1}`);
+    theme.tables.push({ id: uid(), title, cols: n, headers: headers.slice(0, n), rows: Array.from({ length: 3 }, () => Array(n).fill('')) });
+    save(); closeModal('modalTable');
+    renderTables(); renderThemeView();
+    showToast('Tabla creada');
+  }
+
+  // ---------- Toast ----------
+  let toastTimer;
+  function showToast(msg, icon = 'check_circle') {
+    const t = $('#toast');
+    t.innerHTML = `<span class="material-icons-round">${icon}</span><span>${esc(msg)}</span>`;
+    t.hidden = false;
+    requestAnimationFrame(() => t.classList.add('show'));
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.classList.remove('show'); setTimeout(() => { t.hidden = true; }, 340); }, 2600);
+  }
+
+  // ---------- Teclado virtual: layouts ----------
+  const parseKeys = s => s.trim().split(/\s*,\s*/).map(p => {
+    const [c, ...n] = p.split(' ');
+    return [c, n.join(' ')];
+  });
+  const LAYOUTS = {
+    japanese_hiragana: parseKeys(`あ a, い i, う u, え e, お o, か ka, き ki, く ku, け ke, こ ko, さ sa, し shi, す su, せ se, そ so, た ta, ち chi, つ tsu, て te, と to, な na, に ni, ぬ nu, ね ne, の no, は ha, ひ hi, ふ fu, へ he, ほ ho, ま ma, み mi, む mu, め me, も mo, や ya, ゆ yu, よ yo, ら ra, り ri, る ru, れ re, ろ ro, わ wa, を wo, ん n, が ga, ぎ gi, ぐ gu, げ ge, ご go, ざ za, じ ji, ず zu, ぜ ze, ぞ zo, だ da, で de, ど do, ば ba, び bi, ぶ bu, べ be, ぼ bo, ぱ pa, ぴ pi, ぷ pu, ぺ pe, ぽ po, っ pausa, ゃ ya pequeña, ゅ yu pequeña, ょ yo pequeña, ー alargamiento`),
+    japanese_katakana: parseKeys(`ア a, イ i, ウ u, エ e, オ o, カ ka, キ ki, ク ku, ケ ke, コ ko, サ sa, シ shi, ス su, セ se, ソ so, タ ta, チ chi, ツ tsu, テ te, ト to, ナ na, ニ ni, ヌ nu, ネ ne, ノ no, ハ ha, ヒ hi, フ fu, ヘ he, ホ ho, マ ma, ミ mi, ム mu, メ me, モ mo, ヤ ya, ユ yu, ヨ yo, ラ ra, リ ri, ル ru, レ re, ロ ro, ワ wa, ヲ wo, ン n, ガ ga, ギ gi, グ gu, ゲ ge, ゴ go, ザ za, ジ ji, ズ zu, ゼ ze, ゾ zo, ダ da, デ de, ド do, バ ba, ビ bi, ブ bu, ベ be, ボ bo, パ pa, ピ pi, プ pu, ペ pe, ポ po`),
+    chinese_common: parseKeys(`我 wo, 你 ni, 他 ta, 她 ta, 好 hao, 是 shi, 不 bu, 了 le, 的 de, 一 yi, 二 er, 三 san, 四 si, 五 wu, 六 liu, 七 qi, 八 ba, 九 jiu, 十 shi, 人 ren, 大 da, 小 xiao, 上 shang, 下 xia, 中 zhong, 天 tian, 水 shui, 火 huo, 山 shan, 口 kou, 手 shou, 目 mu, 心 xin, 学 xue, 生 sheng, 老 lao, 师 shi, 国 guo, 语 yu, 文 wen, 字 zi, 书 shu, 朋 peng, 友 you, 爱 ai, 吃 chi, 喝 he, 说 shuo, 看 kan, 听 ting, 读 du, 写 xie, 今 jin, 明 ming, 日 ri, 月 yue, 年 nian, 猫 mao, 狗 gou, 茶 cha, 谢 xie, 请 qing, 对 dui`),
+    korean_hangul: parseKeys(`ㄱ g/k, ㄴ n, ㄷ d/t, ㄹ r/l, ㅁ m, ㅂ b/p, ㅅ s, ㅇ ng, ㅈ j, ㅊ ch, ㅋ k, ㅌ t, ㅍ p, ㅎ h, ㄲ kk, ㄸ tt, ㅃ pp, ㅆ ss, ㅉ jj, ㅏ a, ㅑ ya, ㅓ eo, ㅕ yeo, ㅗ o, ㅛ yo, ㅜ u, ㅠ yu, ㅡ eu, ㅣ i, ㅐ ae, ㅔ e, ㅚ oe, ㅘ wa, ㅝ wo, ㅟ wi, ㅢ ui, ㅙ wae, ㅞ we`),
+    arabic: parseKeys(`ا alif, ب ba, ت ta, ث tha, ج yim, ح ha, خ kha, د dal, ذ dhal, ر ra, ز zay, س sin, ش shin, ص sad, ض dad, ط ta, ظ dha, ع ain, غ ghain, ف fa, ق qaf, ك kaf, ل lam, م mim, ن nun, ه ha, و waw, ي ya, ء hamza, لا lam-alif, َ fatha, ِ kasra, ُ damma, ّ shadda, ْ sukun`),
+    greek: parseKeys(`α alfa, β beta, γ gamma, δ delta, ε epsilon, ζ dseta, η eta, θ theta, ι iota, κ kappa, λ lambda, μ mi, ν ni, ξ xi, ο omicron, π pi, ρ rho, σ sigma, ς sigma final, τ tau, υ ipsilon, φ fi, χ ji, ψ psi, ω omega, Γ Gamma, Δ Delta, Θ Theta, Λ Lambda, Ξ Xi, Π Pi, Σ Sigma, Φ Fi, Ψ Psi, Ω Omega, ά alfa aguda, έ epsilon aguda, ή eta aguda, ί iota aguda, ό omicron aguda, ύ ipsilon aguda, ώ omega aguda, ϋ ipsilon diéresis`),
+    cyrillic: parseKeys(`а a, б be, в ve, г ge, д de, е ye, ё yo, ж zhe, з ze, и i, й i corta, к ka, л el, м em, н en, о o, п pe, р er, с es, т te, у u, ф ef, х ja, ц tse, ч che, ш sha, щ shcha, ъ signo duro, ы yery, ь signo blando, э e, ю yu, я ya, і i ucraniana, ї yi, є ie, ґ ge`),
+    ipa: parseKeys(`p p, b b, t t, d d, k k, g g, tʃ africada ch, dʒ africada y, f f, v v, θ th sorda, ð th sonora, s s, z z, ʃ sh, ʒ zh, m m, n n, ŋ ng, h h, l l, ɹ r aproximante, j y, w w, ɪ i corta, iː i larga, ʊ u corta, uː u larga, ə schwa, ɜː er larga, ɔː o abierta, æ a abierta, ʌ a media, ɑː a larga, ɒ o redondeada, eɪ ei, aɪ ai, ɔɪ oi, aʊ au, əʊ ou, ɪə ia, eə ea, ʊə ua, ˈ acento primario, ˌ acento secundario, ː longitud, ʔ oclusiva glotal`),
+    math: parseKeys(`+ más, − menos, × por, ÷ dividido, = igual, ≠ distinto, ≈ aproximadamente, < menor, > mayor, ≤ menor o igual, ≥ mayor o igual, ± más menos, √ raíz, ∞ infinito, ∫ integral, ∬ integral doble, ∑ sumatorio, ∏ productorio, ∂ derivada parcial, ∇ nabla, π pi, % porcentaje, ‰ por mil, ° grado, ′ prima, ″ doble prima, ∧ y lógica, ∨ o lógica, ¬ no lógico, ∀ para todo, ∃ existe, ∈ pertenece, ∉ no pertenece, ∅ vacío, ∪ unión, ∩ intersección, ⊂ incluido, ⊃ contiene, ⊆ subconjunto, → flecha derecha, ← flecha izquierda, ↔ flecha doble, ⇒ implica, ⇔ equivalente, ∴ por lo tanto, ∵ porque, ∥ paralelo, ⊥ perpendicular, ∠ ángulo, △ triángulo, ∘ composición, Δ delta, θ theta, λ lambda, μ mi, σ sigma, Ω omega, ƒ función`),
+    accents: parseKeys(`á a aguda, é e aguda, í i aguda, ó o aguda, ú u aguda, à a grave, è e grave, ì i grave, ò o grave, ù u grave, â a circunfleja, ê e circunfleja, î i circunfleja, ô o circunfleja, û u circunfleja, ã a tilde, õ o tilde, ñ eñe, ä a diéresis, ë e diéresis, ï i diéresis, ö o diéresis, ü u diéresis, ç c cedilla, œ oe ligadura, æ ae ligadura, å a anillo, ø o barrada, ł l barrada, đ d barrada, š s caron, ž z caron, č c caron, ř r caron, ů u anillo, ğ g breve, ş s cedilla, ı i sin punto, ß eszett, ý y aguda, ¿ interrogación abierta, ¡ admiración abierta, ª femenino, º ordinal, « comilla latina, » comilla latina cierre`)
+  };
+
+  // ---------- Teclado virtual: render, inserción y arrastre ----------
+  const vk = $('#virtualKeyboard');
+  function toggleVirtualKeyboard() {
+    vk.classList.toggle('hidden');
+    if (!vk.classList.contains('hidden') && !vk.dataset.ready) {
+      renderKeyboard();
+      vk.dataset.ready = '1';
+    }
+  }
+  $('#btnToggleKeyboard').addEventListener('click', toggleVirtualKeyboard);
+  $('#vkLayoutSelect').addEventListener('change', () => renderKeyboard($('#vkSearchInput').value));
+  $('#vkSearchInput').addEventListener('input', e => renderKeyboard(e.target.value));
+
+  const norm = s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  function renderKeyboard(filter = '') {
+    const chars = LAYOUTS[$('#vkLayoutSelect').value] || [];
+    const q = norm(filter.trim());
+    const list = q ? chars.filter(([ch, name]) => name.includes(q) || ch === filter.trim()) : chars;
+    $('#vkKeysContainer').innerHTML = list.length
+      ? list.map(([ch, name]) => `<button class="vk-key" data-char="${ch}" title="${esc(name)}">${ch}</button>`).join('')
+      : `<p class="vk-empty">Sin resultados para «${esc(filter)}»</p>`;
+  }
+
+  // Recordar el último campo de texto enfocado para insertar ahí
+  document.addEventListener('focusin', e => {
+    if (e.target.matches('input[type="text"], textarea, [contenteditable="true"]')) lastField = e.target;
+  });
+  // Evita que el foco salga del campo al pulsar una tecla
+  $('#vkKeysContainer').addEventListener('mousedown', e => e.preventDefault());
+  $('#vkKeysContainer').addEventListener('click', e => {
+    const key = e.target.closest('.vk-key'); if (!key) return;
+    insertChar(key.dataset.char);
+  });
+  function insertChar(ch) {
+    if (!lastField || !document.contains(lastField)) {
+      showToast('Haz clic primero en un campo de texto', 'info');
+      return;
+    }
+    if (lastField.isContentEditable) {
+      lastField.focus();
+      document.execCommand('insertText', false, ch);
+    } else {
+      const s = lastField.selectionStart ?? lastField.value.length;
+      lastField.setRangeText(ch, s, s, 'end');
+      lastField.dispatchEvent(new Event('input', { bubbles: true }));
+      lastField.focus();
+    }
+  }
+
+  // Arrastrar el panel desde el asa
+  const handle = $('#vkDragHandle');
+  let drag = null;
+  handle.addEventListener('pointerdown', e => {
+    const r = vk.getBoundingClientRect();
+    vk.style.left = r.left + 'px'; vk.style.top = r.top + 'px';
+    vk.style.right = 'auto'; vk.style.bottom = 'auto';
+    drag = { dx: e.clientX - r.left, dy: e.clientY - r.top };
+    handle.setPointerCapture(e.pointerId);
+  });
+  handle.addEventListener('pointermove', e => {
+    if (!drag) return;
+    const x = Math.min(Math.max(8, e.clientX - drag.dx), innerWidth - vk.offsetWidth - 8);
+    const y = Math.min(Math.max(8, e.clientY - drag.dy), innerHeight - vk.offsetHeight - 8);
+    vk.style.left = x + 'px'; vk.style.top = y + 'px';
+  });
+  handle.addEventListener('pointerup', () => drag = null);
+
+  // ---------- Datos de ejemplo ----------
+  function loadDemo() {
+    db.themes.push(
+      {
+        id: uid(), emoji: '🇯🇵', name: 'Japonés · Hiragana', createdAt: Date.now(),
+        tables: [{
+          id: uid(), title: 'Gojūon — primeras filas', cols: 3, headers: ['Kana', 'Romaji', 'Fila'],
+          rows: [['あ', 'a', 'A'], ['い', 'i', 'A'], ['う', 'u', 'A'], ['え', 'e', 'A'], ['お', 'o', 'A'], ['か', 'ka', 'KA'], ['き', 'ki', 'KA'], ['く', 'ku', 'KA'], ['け', 'ke', 'KA'], ['こ', 'ko', 'KA'], ['さ', 'sa', 'SA'], ['し', 'shi', 'SA'], ['す', 'su', 'SA'], ['せ', 'se', 'SA'], ['そ', 'so', 'SA']]
+        }, {
+          id: uid(), title: 'Saludos básicos', cols: 3, headers: ['Japonés', 'Lectura', 'Español'],
+          rows: [['こんにちは', 'konnichiwa', 'Hola'], ['ありがとう', 'arigatō', 'Gracias'], ['さようなら', 'sayōnara', 'Adiós']]
+        }]
+      },
+      {
+        id: uid(), emoji: '📐', name: 'Matemáticas · Símbolos', createdAt: Date.now(),
+        tables: [{
+          id: uid(), title: 'Lógica y conjuntos', cols: 3, headers: ['Símbolo', 'Nombre', 'Ejemplo'],
+          rows: [['∀', 'para todo', '∀x'], ['∃', 'existe', '∃y'], ['∈', 'pertenece', 'x ∈ A'], ['∅', 'conjunto vacío', 'A = ∅'], ['→', 'implica', 'p → q']]
+        }]
+      }
+    );
+    save(); renderThemes();
+    showToast('Datos de ejemplo cargados', 'auto_stories');
+  }
+
+  // ---------- Arranque ----------
+  renderThemes();
+  </script>
 </body>
 </html>
