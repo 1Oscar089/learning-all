@@ -30,11 +30,18 @@ body{
   min-height:100dvh; display:flex; flex-direction:column;
   -webkit-font-smoothing:antialiased; transition:background .25s,color .25s;
 }
+/* Todo el índice se muestra en mayúsculas (solo visual, los datos no cambian) */
+body{ text-transform:uppercase; }
+code,.file-path{ text-transform:none; }
 button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
 a{color:inherit;text-decoration:none}
 svg{display:block}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
 .wrap{width:100%;max-width:1800px;margin-inline:auto;padding-inline:clamp(10px,1.8vw,22px)}
+.file-path{
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:11px;background:var(--surface2);padding:2px 7px;border-radius:6px;color:var(--ink);
+}
 
 /* ═══════════ Cabecera ═══════════ */
 .top{
@@ -52,14 +59,14 @@ svg{display:block}
 }
 .brand:hover .inf-path{animation:draw 1.4s cubic-bezier(.55,0,.25,1) forwards}
 @keyframes draw{from{stroke-dashoffset:460}to{stroke-dashoffset:0}}
-.brand-name{font-size:16px;font-weight:600;letter-spacing:-.01em;white-space:nowrap}
+.brand-name{font-size:15px;font-weight:600;letter-spacing:.02em;white-space:nowrap}
 .brand-name em{font-family:'Fraunces',serif;font-style:italic;font-weight:500;color:var(--accent)}
 .actions{display:flex;align-items:center;gap:8px}
 
 .btn{
   display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);
-  background:var(--surface);border-radius:10px;padding:8px 14px;font-size:13.5px;
-  font-weight:500;transition:transform .15s,background .15s,border-color .15s;
+  background:var(--surface);border-radius:10px;padding:8px 14px;font-size:12.5px;
+  font-weight:600;letter-spacing:.05em;transition:transform .15s,background .15s,border-color .15s;
 }
 .btn:hover{border-color:var(--muted)}
 .btn:active{transform:scale(.97)}
@@ -84,19 +91,20 @@ svg{display:block}
 /* ═══════════ Principal ═══════════ */
 main{flex:1;padding-block:22px 40px}
 .page-head{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;margin-bottom:14px}
-.page-head h1{font-family:'Fraunces',serif;font-weight:600;font-size:clamp(26px,3.4vw,36px);letter-spacing:-.02em}
-.page-head p{font-size:13px;color:var(--muted)}
+.page-head h1{font-family:'Fraunces',serif;font-weight:600;font-size:clamp(26px,3.4vw,36px);letter-spacing:.01em}
+.page-head p{font-size:12.5px;color:var(--muted);letter-spacing:.04em}
 .toolbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:20px}
 .search{
   display:flex;align-items:center;gap:8px;background:var(--surface);
   border:1px solid var(--line);border-radius:999px;padding:8px 14px;min-width:min(260px,100%);
 }
 .search svg{width:15px;height:15px;stroke:var(--muted);fill:none;stroke-width:1.8;flex:none}
-.search input{border:none;background:none;outline:none;font:inherit;font-size:13.5px;color:inherit;width:100%}
+.search input{border:none;background:none;outline:none;font:inherit;font-size:13px;color:inherit;width:100%}
 .chips{display:flex;gap:7px;flex-wrap:wrap}
 .chip{
-  font-size:12px;padding:5px 12px;border:1px solid var(--line);border-radius:999px;
-  color:var(--muted);transition:all .15s;white-space:nowrap;
+  font-size:11.5px;font-weight:500;letter-spacing:.04em;padding:5px 12px;
+  border:1px solid var(--line);border-radius:999px;color:var(--muted);
+  transition:all .15s;white-space:nowrap;
 }
 .chip:hover{border-color:var(--muted);color:var(--ink)}
 .chip.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
@@ -106,9 +114,9 @@ main{flex:1;padding-block:22px 40px}
 .group{margin-bottom:30px}
 .group-head{display:flex;align-items:center;gap:12px;margin-bottom:13px}
 .g-num{font-size:11.5px;font-weight:600;letter-spacing:.1em;color:var(--muted)}
-.group-head h2{font-family:'Fraunces',serif;font-style:italic;font-weight:500;font-size:clamp(20px,2.4vw,25px);letter-spacing:-.01em}
+.group-head h2{font-family:'Fraunces',serif;font-style:italic;font-weight:500;font-size:clamp(20px,2.4vw,25px);letter-spacing:.02em}
 .g-line{flex:1;height:1px;background:var(--line)}
-.g-count{font-size:12px;color:var(--muted);white-space:nowrap}
+.g-count{font-size:11.5px;color:var(--muted);white-space:nowrap;letter-spacing:.04em}
 
 /* ═══════════ Vista tarjetas ═══════════ */
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,255px),1fr));gap:13px}
@@ -127,12 +135,12 @@ main{flex:1;padding-block:22px 40px}
 }
 .mod-icon svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .mod-icon img{width:26px;height:26px;object-fit:contain;border-radius:6px}
-.card h3{font-family:'Fraunces',serif;font-weight:600;font-size:19px;letter-spacing:-.01em;line-height:1.2}
+.card h3{font-family:'Fraunces',serif;font-weight:600;font-size:18px;letter-spacing:.02em;line-height:1.2}
 .card p{
-  font-size:13px;color:var(--muted);line-height:1.5;flex:1;
+  font-size:12px;color:var(--muted);line-height:1.55;flex:1;
   display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;
 }
-.card-meta{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--muted)}
+.card-meta{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted);letter-spacing:.03em}
 .card-meta .cat{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:3px 10px}
 .card-meta .cat::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--c,var(--muted))}
 .card-edit{
@@ -156,9 +164,9 @@ main{flex:1;padding-block:22px 40px}
 .row-item .mod-icon{width:36px;height:36px;font-size:16px;border-radius:10px}
 .row-item .mod-icon svg{width:18px;height:18px}
 .row-item .mod-icon img{width:20px;height:20px}
-.row-item .r-name{font-weight:600;font-size:14.5px;line-height:1.25}
-.row-item .r-desc{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.row-item .cat{font-size:11.5px;color:var(--muted);display:flex;align-items:center;gap:6px;white-space:nowrap}
+.row-item .r-name{font-weight:600;font-size:13.5px;letter-spacing:.03em;line-height:1.25}
+.row-item .r-desc{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row-item .cat{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:6px;white-space:nowrap}
 .row-item .cat::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--c,var(--muted))}
 .row-item .chev{width:15px;height:15px;stroke:var(--muted);fill:none;stroke-width:1.8}
 .row-edit{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--muted)}
@@ -176,10 +184,10 @@ main{flex:1;padding-block:22px 40px}
   stroke:currentColor;stroke-width:8;stroke-linecap:round;fill:none;
   stroke-dasharray:460;stroke-dashoffset:460;animation:draw 2.1s .15s cubic-bezier(.6,0,.2,1) forwards;
 }
-.hero h1{font-family:'Fraunces',serif;font-weight:600;font-size:clamp(34px,6vw,54px);letter-spacing:-.025em}
+.hero h1{font-family:'Fraunces',serif;font-weight:600;font-size:clamp(32px,6vw,52px);letter-spacing:.02em}
 .hero h1 em{font-style:italic;color:var(--accent)}
-.hero p{color:var(--muted);font-size:15px;max-width:420px;line-height:1.6}
-.empty-note{color:var(--muted);font-size:13.5px;padding:36px 0;text-align:center}
+.hero p{color:var(--muted);font-size:13.5px;max-width:440px;line-height:1.6}
+.empty-note{color:var(--muted);font-size:13px;padding:36px 0;text-align:center}
 .skel{height:150px;border-radius:16px;background:var(--surface2);animation:pulse 1.3s ease-in-out infinite}
 @keyframes pulse{50%{opacity:.45}}
 
@@ -192,7 +200,7 @@ dialog::backdrop{background:rgba(12,9,4,.55);backdrop-filter:blur(3px)}
 dialog[open]{animation:pop .22s cubic-bezier(.2,.9,.3,1.15)}
 @keyframes pop{from{opacity:0;transform:translateY(16px) scale(.98)}}
 .dlg-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px 0}
-.dlg-head h3{font-family:'Fraunces',serif;font-weight:600;font-size:21px;letter-spacing:-.01em}
+.dlg-head h3{font-family:'Fraunces',serif;font-weight:600;font-size:20px;letter-spacing:.02em}
 .dlg-x{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;color:var(--muted)}
 .dlg-x:hover{background:var(--surface2);color:var(--ink)}
 .dlg-x svg{width:15px;height:15px;stroke:currentColor;stroke-width:1.8;fill:none;stroke-linecap:round}
@@ -200,7 +208,7 @@ dialog[open]{animation:pop .22s cubic-bezier(.2,.9,.3,1.15)}
 .dlg-foot{display:flex;align-items:center;gap:9px;padding:14px 20px;border-top:1px solid var(--line)}
 .dlg-foot .grow{flex:1}
 .field label{
-  display:block;font-size:10.5px;font-weight:600;letter-spacing:.09em;
+  display:block;font-size:10px;font-weight:600;letter-spacing:.09em;
   text-transform:uppercase;color:var(--muted);margin-bottom:6px;
 }
 input[type=text],input:not([type]),textarea{
@@ -246,15 +254,15 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:9px}
 .cat-list.open{display:block}
 .cat-list button{
   display:flex;justify-content:space-between;align-items:center;width:100%;
-  text-align:left;padding:8px 11px;border-radius:8px;font-size:13.5px;
+  text-align:left;padding:8px 11px;border-radius:8px;font-size:13px;
 }
 .cat-list button:hover{background:var(--surface2)}
-.cat-list button span{color:var(--muted);font-size:11.5px}
+.cat-list button span{color:var(--muted);font-size:11px}
 
 /* diálogo de categorías */
 .cat-row{display:flex;gap:9px;align-items:center}
 .cat-row input{flex:1}
-.cat-row .use{font-size:11.5px;color:var(--muted);white-space:nowrap}
+.cat-row .use{font-size:11px;color:var(--muted);white-space:nowrap}
 .cat-row .save{width:34px;height:34px;flex:none;border-radius:9px;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;color:var(--muted)}
 .cat-row .save:hover{color:var(--ink);border-color:var(--muted)}
 .cat-row .save svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -265,7 +273,7 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:9px}
 #toasts{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:100;display:flex;flex-direction:column;gap:8px;align-items:center;width:max-content;max-width:calc(100vw - 24px)}
 .toast{
   display:flex;align-items:center;gap:9px;background:var(--ink);color:var(--bg);
-  font-size:13px;padding:10px 16px;border-radius:12px;box-shadow:var(--shadow);
+  font-size:12.5px;padding:10px 16px;border-radius:12px;box-shadow:var(--shadow);
   animation:tin .25s cubic-bezier(.2,.9,.3,1.2);
 }
 .toast.out{opacity:0;transform:translateY(8px);transition:all .3s}
@@ -275,7 +283,7 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:9px}
 /* ═══════════ Pie ═══════════ */
 .foot{
   border-top:1px solid var(--line);padding-block:16px;display:flex;
-  justify-content:space-between;gap:10px;font-size:12px;color:var(--muted);flex-wrap:wrap;
+  justify-content:space-between;gap:10px;font-size:11.5px;color:var(--muted);flex-wrap:wrap;letter-spacing:.04em;
 }
 .foot em{font-family:'Fraunces',serif}
 
@@ -360,6 +368,7 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:9px}
       <div class="field">
         <label for="f-nombre">Nombre del tema</label>
         <input id="f-nombre" maxlength="60" placeholder="p. ej. Biología celular" required>
+        <p class="hint" id="f-file-hint"></p>
       </div>
       <div class="field-row">
         <div class="field">
@@ -433,7 +442,7 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:9px}
 <script>
 'use strict';
 /* ═══════════════════════════════════════════════════════════════
-   ⚙️  CONFIGURACIÓN — pega aquí la URL de tu Web App (termina en /exec)
+   ⚙️  CONFIGURACIÓN — Web App de Apps Script (ya conectada)
    ═══════════════════════════════════════════════════════════════ */
 const API_URL = "https://script.google.com/macros/s/AKfycbxu8-qma-LPukPa1JmGj9uvdzmwOviz0fnULmu6ijPHTOng06H8tiHraAjQvuBUoONB/exec";
 
@@ -467,6 +476,22 @@ function findCatConflict(value, pool, exclude){
     if(v.startsWith(e) || e.startsWith(v)) return {type:'similar', cat:e};
   }
   return null;
+}
+
+/* Slug para el archivo de cada tema: "Biología Celular" → biologia-celular */
+function slugify(name){
+  const s = String(name || '').trim().toLowerCase();
+  let out = '';
+  for(const ch of s){
+    if(ch === 'ñ') out += 'n';
+    else if(ACC.hasOwnProperty(ch)) out += ACC[ch];
+    else out += ch;
+  }
+  return out.replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'') || 'tema';
+}
+/* Cada tema abre su propio archivo en pages/ ; el ?id= permite cargar sus datos */
+function themeHref(m){
+  return `pages/${slugify(m.nombre)}.html?id=${encodeURIComponent(m.id)}`;
 }
 
 const PALETTE = ['#a34a1d','#3f6f4e','#8a3a52','#b08a2e','#56652a','#2f6076','#7d4a6f','#4d4a42'];
@@ -643,12 +668,13 @@ function render(){
     C.innerHTML = `<p class="empty-note">Ningún tema coincide con la búsqueda.</p>`;
     return;
   }
-  let html = '', lastCat = null, gi = 0, groupCount = 0;
+  let html = '', lastCat = null, gi = 0, nRow = 0, groupCount = 0;
   for(const m of list){
     const cat = m.categoria || '';
     if(cat !== lastCat){
-      if(lastCat !== null) html += ui.view === 'cards' ? '</div>' : '</div>';
-      gi++; groupCount = list.filter(x => (x.categoria || '') === cat).length;
+      if(lastCat !== null) html += '</div></section>';   // cierra el grupo anterior
+      gi++; nRow = 0;                                    // ← contador por grupo (fix NaN)
+      groupCount = list.filter(x => (x.categoria || '') === cat).length;
       html += `
         <section class="group">
           <div class="group-head">
@@ -660,15 +686,15 @@ function render(){
           ${ui.view === 'cards' ? '<div class="grid">' : '<div class="rows">'}`
       lastCat = cat;
     }
-    html += ui.view === 'cards' ? cardHTML(m) : rowHTML(m);
+    html += ui.view === 'cards' ? cardHTML(m) : rowHTML(m, nRow++);
   }
-  html += '</div></section>';
+  if(lastCat !== null) html += '</div></section>';
   C.innerHTML = html;
 }
 
 function cardHTML(m){
   return `
-  <article class="card" data-href="tema.html?id=${esc(m.id)}" tabindex="0" role="link"
+  <article class="card" data-href="${themeHref(m)}" tabindex="0" role="link"
            style="--c:${esc(m.color || PALETTE[0])}">
     ${renderIcon(m.icono)}
     <h3>${esc(m.nombre)}</h3>
@@ -683,11 +709,11 @@ function cardHTML(m){
   </article>`;
 }
 
-function rowHTML(m, i){
+function rowHTML(m, n){   // ← n es el número dentro de su categoría (01, 02…)
   return `
-  <div class="row-item" data-href="tema.html?id=${esc(m.id)}" tabindex="0" role="link"
+  <div class="row-item" data-href="${themeHref(m)}" tabindex="0" role="link"
        style="--c:${esc(m.color || PALETTE[0])}">
-    <span class="idx">${String(i + 1).padStart(2,'0')}</span>
+    <span class="idx">${String(n + 1).padStart(2,'0')}</span>
     ${renderIcon(m.icono)}
     <div style="min-width:0">
       <div class="r-name">${esc(m.nombre)}</div>
@@ -742,9 +768,17 @@ function catHint(value, exclude){
   box.className = 'hint err'; return false;
 }
 
+/* Muestra el archivo pages/….html que corresponderá al tema */
+function updateFileHint(){
+  const n = $('#f-nombre').value.trim();
+  $('#f-file-hint').innerHTML = n
+    ? `Archivo de destino: <span class="file-path">pages/${slugify(n)}.html</span>`
+    : '';
+}
+
 function refreshIconPreview(){
   const box = $('#f-icono-preview');
-  box.innerHTML = renderIcon($('#f-icono').value).replace('class="mod-icon"','class="icon-preview-inner"')
+  box.innerHTML = renderIcon($('#f-icono').value)
     .replace('<span class="mod-icon">','').replace(/<\/span>$/,'');
   box.style.setProperty('--pc', $('#f-color').value);
 }
@@ -776,6 +810,7 @@ function openModuleDialog(id){
   $('#f-cat-hint').className = 'hint';
   renderSwatches();
   refreshIconPreview();
+  updateFileHint();
   catHint($('#f-cat').value, m ? m.categoria : '');
   dlgModule.showModal();
   setTimeout(() => $('#f-nombre').focus(), 60);
@@ -805,6 +840,7 @@ catInput.addEventListener('input', () => {
   catHint(catInput.value, editingId ? (getModule(editingId)?.categoria || '') : '');
 });
 catInput.addEventListener('blur', () => setTimeout(() => catList.classList.remove('open'), 120));
+ $('#f-nombre').addEventListener('input', updateFileHint);
  $('#f-icono').addEventListener('input', refreshIconPreview);
  $('#f-color').addEventListener('input', () => { markSwatch(); refreshIconPreview(); });
 
@@ -955,26 +991,14 @@ function setView(v){
 };
  $$('[data-close]').forEach(b => b.onclick = () => $('#' + b.dataset.close).close());
 
-/* ─────────── Datos de demostración (solo si no hay API_URL) ─────────── */
+/* ─────────── Datos de demostración (solo si se borra API_URL) ─────────── */
 const DEMO_MODULES = [
   { id:'d1', nombre:'Biología celular', color:'#3f6f4e', categoria:'ciencias', tablas:4,
     icono:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="10" cy="11" r="3.2"/><circle cx="16.5" cy="16" r="1.4"/><path d="M15 6.5c1.8.6 3 1.8 3.6 3.4"/></svg>',
     descripcion:'La unidad mínima de la vida: estructura, orgánulos y procesos fundamentales.' },
   { id:'d2', nombre:'Álgebra lineal', color:'#2f6076', categoria:'matematicas', tablas:2,
     icono:'<svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="2"/><path d="M9.5 3.5v17M15.5 3.5v17M3.5 9.5h17M3.5 15.5h17"/></svg>',
-    descripcion:'Vectores, matrices y transformaciones: el lenguaje de los datos.' },
-  { id:'d3', nombre:'Programación web', color:'#a34a1d', categoria:'tecnologia', tablas:5,
-    icono:'<svg viewBox="0 0 24 24"><path d="m8 8-4 4 4 4M16 8l4 4-4 4M13.5 5l-3 14"/></svg>',
-    descripcion:'HTML, CSS y JavaScript desde cero hasta construir tus propias páginas.' },
-  { id:'d4', nombre:'Historia universal', color:'#8a3a52', categoria:'humanidades', tablas:3,
-    icono:'<svg viewBox="0 0 24 24"><path d="M4 21h16M6 21V8m4 13V8m4 13V8m4 13V8M3.5 8 12 3l8.5 5Z"/></svg>',
-    descripcion:'De las primeras civilizaciones al mundo contemporáneo, en perspectiva.' },
-  { id:'d5', nombre:'Inglés B2', color:'#b08a2e', categoria:'idiomas', tablas:6,
-    icono:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 3.8 5.6 3.8 9S14.5 18.5 12 21c-2.5-2.5-3.8-5.6-3.8-9S9.5 5.5 12 3Z"/></svg>',
-    descripcion:'Gramática, vocabulario y expresiones para el nivel upper-intermediate.' },
-  { id:'d6', nombre:'Física cuántica', color:'#4d4a42', categoria:'ciencias', tablas:2,
-    icono:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><ellipse cx="12" cy="12" rx="9" ry="4"/><ellipse cx="12" cy="12" rx="9" ry="4" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="9" ry="4" transform="rotate(120 12 12)"/></svg>',
-    descripcion:'El mundo subatómico: superposición, entrelazamiento y probabilidad.' }
+    descripcion:'Vectores, matrices y transformaciones: el lenguaje de los datos.' }
 ];
 
 /* ─────────── Arranque ─────────── */
