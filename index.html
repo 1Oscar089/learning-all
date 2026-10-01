@@ -1,281 +1,1005 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-theme="dark">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Tablas de Aprendizaje</title>
-  <link rel="stylesheet" href="styles.css" />
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <!-- Icons -->
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aprendizaje Infinito</title>
+<script>
+/* Tema antes del primer pintado para evitar destellos */
+document.documentElement.dataset.theme =
+  localStorage.getItem('ai_theme') ||
+  (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..700;1,9..144,400..700&family=Space+Grotesk:wght@400..700&display=swap" rel="stylesheet">
+<style>
+/* ═══════════ Base ═══════════ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+[data-theme="light"]{
+  --bg:#f4f1e9; --surface:#fdfbf5; --surface2:#eae5d8; --ink:#1d1a14;
+  --muted:#7b7462; --line:#ddd6c3; --accent:#a34a1d; --shadow:0 14px 34px rgba(30,25,12,.10);
+}
+[data-theme="dark"]{
+  --bg:#15130d; --surface:#1e1b13; --surface2:#2a261a; --ink:#ece6d6;
+  --muted:#9c947d; --line:#332e20; --accent:#dd8143; --shadow:0 14px 34px rgba(0,0,0,.45);
+}
+html{-webkit-text-size-adjust:100%}
+body{
+  font-family:'Space Grotesk',sans-serif; background:var(--bg); color:var(--ink);
+  min-height:100dvh; display:flex; flex-direction:column;
+  -webkit-font-smoothing:antialiased; transition:background .25s,color .25s;
+}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+a{color:inherit;text-decoration:none}
+svg{display:block}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+.wrap{width:100%;max-width:1800px;margin-inline:auto;padding-inline:clamp(10px,1.8vw,22px)}
+
+/* ═══════════ Cabecera ═══════════ */
+.top{
+  position:sticky;top:0;z-index:40;
+  background:color-mix(in srgb,var(--bg) 82%,transparent);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--line);
+}
+.top-in{display:flex;align-items:center;justify-content:space-between;gap:10px;height:58px}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.brand .inf{width:38px;height:19px;color:var(--accent);flex:none;overflow:visible}
+.brand .inf-path{
+  stroke-dasharray:460;stroke-dashoffset:0;stroke:currentColor;
+  stroke-width:13;stroke-linecap:round;fill:none;
+}
+.brand:hover .inf-path{animation:draw 1.4s cubic-bezier(.55,0,.25,1) forwards}
+@keyframes draw{from{stroke-dashoffset:460}to{stroke-dashoffset:0}}
+.brand-name{font-size:16px;font-weight:600;letter-spacing:-.01em;white-space:nowrap}
+.brand-name em{font-family:'Fraunces',serif;font-style:italic;font-weight:500;color:var(--accent)}
+.actions{display:flex;align-items:center;gap:8px}
+
+.btn{
+  display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);
+  background:var(--surface);border-radius:10px;padding:8px 14px;font-size:13.5px;
+  font-weight:500;transition:transform .15s,background .15s,border-color .15s;
+}
+.btn:hover{border-color:var(--muted)}
+.btn:active{transform:scale(.97)}
+.btn.primary{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.btn.primary:hover{opacity:.9}
+.btn.icon{padding:8px;border-radius:10px}
+.btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface)}
+.seg button{padding:8px 10px;color:var(--muted);transition:background .15s,color .15s}
+.seg button.on{background:var(--ink);color:var(--bg)}
+.seg button svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8}
+[data-theme="light"] .ico-moon{display:none}
+[data-theme="dark"]  .ico-sun{display:none}
+
+/* ═══════════ Aviso demo ═══════════ */
+#demo-banner{
+  border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--accent) 12%,var(--bg));
+  color:var(--ink);font-size:12.5px;padding:8px clamp(10px,1.8vw,22px);
+}
+#demo-banner code{font-size:11.5px;background:var(--surface2);padding:1px 6px;border-radius:5px}
+
+/* ═══════════ Principal ═══════════ */
+main{flex:1;padding-block:22px 40px}
+.page-head{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;margin-bottom:14px}
+.page-head h1{font-family:'Fraunces',serif;font-weight:600;font-size:clamp(26px,3.4vw,36px);letter-spacing:-.02em}
+.page-head p{font-size:13px;color:var(--muted)}
+.toolbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:20px}
+.search{
+  display:flex;align-items:center;gap:8px;background:var(--surface);
+  border:1px solid var(--line);border-radius:999px;padding:8px 14px;min-width:min(260px,100%);
+}
+.search svg{width:15px;height:15px;stroke:var(--muted);fill:none;stroke-width:1.8;flex:none}
+.search input{border:none;background:none;outline:none;font:inherit;font-size:13.5px;color:inherit;width:100%}
+.chips{display:flex;gap:7px;flex-wrap:wrap}
+.chip{
+  font-size:12px;padding:5px 12px;border:1px solid var(--line);border-radius:999px;
+  color:var(--muted);transition:all .15s;white-space:nowrap;
+}
+.chip:hover{border-color:var(--muted);color:var(--ink)}
+.chip.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.chip b{font-weight:600;opacity:.65;margin-left:3px}
+
+/* ═══════════ Grupos por categoría ═══════════ */
+.group{margin-bottom:30px}
+.group-head{display:flex;align-items:center;gap:12px;margin-bottom:13px}
+.g-num{font-size:11.5px;font-weight:600;letter-spacing:.1em;color:var(--muted)}
+.group-head h2{font-family:'Fraunces',serif;font-style:italic;font-weight:500;font-size:clamp(20px,2.4vw,25px);letter-spacing:-.01em}
+.g-line{flex:1;height:1px;background:var(--line)}
+.g-count{font-size:12px;color:var(--muted);white-space:nowrap}
+
+/* ═══════════ Vista tarjetas ═══════════ */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,255px),1fr));gap:13px}
+.card{
+  position:relative;background:var(--surface);border:1px solid var(--line);
+  border-radius:16px;padding:18px 16px 14px;cursor:pointer;display:flex;flex-direction:column;gap:10px;
+  transition:transform .18s,box-shadow .18s,border-color .18s;
+}
+.card::before{content:'';position:absolute;inset:0 0 auto;height:3px;border-radius:16px 16px 0 0;background:var(--c,var(--muted));opacity:.9}
+.card:hover{transform:translateY(-3px);box-shadow:var(--shadow);border-color:color-mix(in srgb,var(--c,var(--muted)) 45%,var(--line))}
+.mod-icon{
+  width:44px;height:44px;border-radius:12px;flex:none;
+  display:flex;align-items:center;justify-content:center;overflow:hidden;
+  background:color-mix(in srgb,var(--c) 14%,transparent);
+  color:var(--c);font-size:20px;line-height:1;
+}
+.mod-icon svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.mod-icon img{width:26px;height:26px;object-fit:contain;border-radius:6px}
+.card h3{font-family:'Fraunces',serif;font-weight:600;font-size:19px;letter-spacing:-.01em;line-height:1.2}
+.card p{
+  font-size:13px;color:var(--muted);line-height:1.5;flex:1;
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;
+}
+.card-meta{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--muted)}
+.card-meta .cat{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:3px 10px}
+.card-meta .cat::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--c,var(--muted))}
+.card-edit{
+  position:absolute;top:12px;right:12px;width:30px;height:30px;border-radius:9px;
+  display:flex;align-items:center;justify-content:center;color:var(--muted);
+  background:var(--surface2);opacity:0;transition:opacity .15s,color .15s;
+}
+.card:hover .card-edit{opacity:1}
+.card-edit:hover{color:var(--ink)}
+@media (hover:none){.card-edit{opacity:1}}
+.card-edit svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+/* ═══════════ Vista lista ═══════════ */
+.rows{border-top:1px solid var(--line)}
+.row-item{
+  display:grid;grid-template-columns:2.4rem 2.4rem 1fr auto auto;align-items:center;gap:13px;
+  padding:11px 6px;border-bottom:1px solid var(--line);cursor:pointer;transition:background .15s;
+}
+.row-item:hover{background:var(--surface)}
+.row-item .idx{font-family:'Fraunces',serif;font-style:italic;color:var(--muted);font-size:15px}
+.row-item .mod-icon{width:36px;height:36px;font-size:16px;border-radius:10px}
+.row-item .mod-icon svg{width:18px;height:18px}
+.row-item .mod-icon img{width:20px;height:20px}
+.row-item .r-name{font-weight:600;font-size:14.5px;line-height:1.25}
+.row-item .r-desc{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row-item .cat{font-size:11.5px;color:var(--muted);display:flex;align-items:center;gap:6px;white-space:nowrap}
+.row-item .cat::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--c,var(--muted))}
+.row-item .chev{width:15px;height:15px;stroke:var(--muted);fill:none;stroke-width:1.8}
+.row-edit{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.row-edit:hover{color:var(--ink);background:var(--surface2)}
+.row-edit svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+@media (max-width:640px){
+  .row-item{grid-template-columns:1.8rem 2.2rem 1fr auto}
+  .row-item .cat,.row-item .chev{display:none}
+}
+
+/* ═══════════ Estado vacío / carga ═══════════ */
+.hero{display:flex;flex-direction:column;align-items:center;text-align:center;gap:18px;padding:9vh 0 6vh}
+.hero .inf{width:150px;height:75px;color:var(--accent);overflow:visible}
+.hero .inf-path{
+  stroke:currentColor;stroke-width:8;stroke-linecap:round;fill:none;
+  stroke-dasharray:460;stroke-dashoffset:460;animation:draw 2.1s .15s cubic-bezier(.6,0,.2,1) forwards;
+}
+.hero h1{font-family:'Fraunces',serif;font-weight:600;font-size:clamp(34px,6vw,54px);letter-spacing:-.025em}
+.hero h1 em{font-style:italic;color:var(--accent)}
+.hero p{color:var(--muted);font-size:15px;max-width:420px;line-height:1.6}
+.empty-note{color:var(--muted);font-size:13.5px;padding:36px 0;text-align:center}
+.skel{height:150px;border-radius:16px;background:var(--surface2);animation:pulse 1.3s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.45}}
+
+/* ═══════════ Diálogos ═══════════ */
+dialog{
+  border:none;border-radius:18px;background:var(--surface);color:var(--ink);
+  width:min(540px,calc(100vw - 20px));padding:0;margin:auto;
+}
+dialog::backdrop{background:rgba(12,9,4,.55);backdrop-filter:blur(3px)}
+dialog[open]{animation:pop .22s cubic-bezier(.2,.9,.3,1.15)}
+@keyframes pop{from{opacity:0;transform:translateY(16px) scale(.98)}}
+.dlg-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px 0}
+.dlg-head h3{font-family:'Fraunces',serif;font-weight:600;font-size:21px;letter-spacing:-.01em}
+.dlg-x{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.dlg-x:hover{background:var(--surface2);color:var(--ink)}
+.dlg-x svg{width:15px;height:15px;stroke:currentColor;stroke-width:1.8;fill:none;stroke-linecap:round}
+.dlg-body{padding:16px 20px;display:flex;flex-direction:column;gap:14px;max-height:64vh;overflow-y:auto}
+.dlg-foot{display:flex;align-items:center;gap:9px;padding:14px 20px;border-top:1px solid var(--line)}
+.dlg-foot .grow{flex:1}
+.field label{
+  display:block;font-size:10.5px;font-weight:600;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--muted);margin-bottom:6px;
+}
+input[type=text],input:not([type]),textarea{
+  font:inherit;font-size:14px;color:inherit;width:100%;
+  background:var(--surface2);border:1px solid transparent;border-radius:10px;
+  padding:9px 12px;outline:none;transition:border-color .15s,background .15s;resize:vertical;
+}
+input:focus,textarea:focus{border-color:var(--accent);background:var(--surface)}
+.field-row{display:grid;grid-template-columns:1fr auto;gap:14px;align-items:start}
+.icon-input{display:flex;gap:9px;align-items:center}
+.icon-preview{
+  width:40px;height:40px;border-radius:11px;flex:none;
+  display:flex;align-items:center;justify-content:center;overflow:hidden;
+  background:color-mix(in srgb,var(--pc,#a34a1d) 14%,transparent);color:var(--pc,#a34a1d);font-size:18px;
+}
+.icon-preview svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.icon-preview img{width:22px;height:22px;object-fit:contain}
+.color-side{display:flex;flex-direction:column;gap:8px;align-items:center}
+input[type=color]{
+  width:44px;height:44px;padding:0;border-radius:12px;border:1px solid var(--line);
+  background:none;cursor:pointer;appearance:none;-webkit-appearance:none;
+}
+input[type=color]::-webkit-color-swatch-wrapper{padding:3px}
+input[type=color]::-webkit-color-swatch{border:none;border-radius:9px}
+.swatches{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.swatches button{width:17px;height:17px;border-radius:50%;border:2px solid transparent;transition:transform .12s}
+.swatches button:hover{transform:scale(1.2)}
+.swatches button.on{border-color:var(--ink)}
+.hint{font-size:11.5px;color:var(--muted);margin-top:5px}
+.hint.ok{color:color-mix(in srgb,var(--accent) 70%,var(--ink))}
+.hint.err{color:#c04a35;font-weight:500}
+[data-theme="dark"] .hint.err{color:#e0705a}
+.btn.danger{color:#c04a35;border-color:color-mix(in srgb,#c04a35 40%,var(--line))}
+.btn.danger:hover{border-color:#c04a35;background:color-mix(in srgb,#c04a35 10%,var(--surface))}
+
+/* selector de categoría (input + sugerencias) */
+.cat-wrap{position:relative}
+.cat-list{
+  position:absolute;top:calc(100% + 5px);left:0;right:0;z-index:10;
+  background:var(--surface);border:1px solid var(--line);border-radius:12px;
+  box-shadow:var(--shadow);max-height:190px;overflow-y:auto;display:none;padding:5px;
+}
+.cat-list.open{display:block}
+.cat-list button{
+  display:flex;justify-content:space-between;align-items:center;width:100%;
+  text-align:left;padding:8px 11px;border-radius:8px;font-size:13.5px;
+}
+.cat-list button:hover{background:var(--surface2)}
+.cat-list button span{color:var(--muted);font-size:11.5px}
+
+/* diálogo de categorías */
+.cat-row{display:flex;gap:9px;align-items:center}
+.cat-row input{flex:1}
+.cat-row .use{font-size:11.5px;color:var(--muted);white-space:nowrap}
+.cat-row .save{width:34px;height:34px;flex:none;border-radius:9px;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.cat-row .save:hover{color:var(--ink);border-color:var(--muted)}
+.cat-row .save svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.cat-row input.bad{border-color:#c04a35}
+.cats-note{font-size:12px;color:var(--muted)}
+
+/* ═══════════ Toasts ═══════════ */
+#toasts{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:100;display:flex;flex-direction:column;gap:8px;align-items:center;width:max-content;max-width:calc(100vw - 24px)}
+.toast{
+  display:flex;align-items:center;gap:9px;background:var(--ink);color:var(--bg);
+  font-size:13px;padding:10px 16px;border-radius:12px;box-shadow:var(--shadow);
+  animation:tin .25s cubic-bezier(.2,.9,.3,1.2);
+}
+.toast.out{opacity:0;transform:translateY(8px);transition:all .3s}
+.toast::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--dot,var(--accent));flex:none}
+@keyframes tin{from{opacity:0;transform:translateY(12px)}}
+
+/* ═══════════ Pie ═══════════ */
+.foot{
+  border-top:1px solid var(--line);padding-block:16px;display:flex;
+  justify-content:space-between;gap:10px;font-size:12px;color:var(--muted);flex-wrap:wrap;
+}
+.foot em{font-family:'Fraunces',serif}
+
+@media (max-width:560px){
+  .btn.primary span{display:none}
+  .btn.primary{padding:8px 11px}
+  .brand-name span{display:none}
+  .field-row{grid-template-columns:1fr}
+}
+</style>
 </head>
 <body>
-  <div class="app-wrapper">
-    <!-- Header -->
-    <header class="app-header">
-      <div class="header-inner">
-        <div class="brand">
-          <span class="brand-emoji">📚</span>
-          <div>
-            <h1>Tablas de Aprendizaje</h1>
-            <p class="subtitle">Crea temas, organiza tablas y aprende lo que quieras con soporte multilenguaje.</p>
-          </div>
-        </div>
-        <div class="header-actions">
-          <button id="btnToggleKeyboard" class="btn btn-ghost" title="Mostrar/Ocultar Teclado Virtual">
-            <span class="material-icons-round">keyboard</span>
-            <span class="btn-text">Teclado Virtual</span>
-          </button>
-          <button id="btnNewTheme" class="btn btn-primary">
-            <span class="material-icons-round">add</span> Nuevo tema
-          </button>
-          <a href="https://1oscar089.github.io/Directorio-de-Sitios/" target="_blank"><button class="btn btn-primary"> Apuntes </button></a>
-        </div>
-      </div>
-    </header>
 
-    <!-- Main -->
-    <main class="app-main">
-      <!-- Vista de temas -->
-      <section id="viewThemes" class="view active">
-        <div id="emptyState" class="empty-state">
-          <div class="empty-emoji">🗂️</div>
-          <h2>Aún no hay temas</h2>
-          <p>Crea tu primer tema para empezar a organizar tus tablas de aprendizaje.</p>
-          <button class="btn btn-primary" onclick="document.getElementById('btnNewTheme').click()">Crear primer tema</button>
-        </div>
-        <div id="themesGrid" class="themes-grid"></div>
-      </section>
-
-      <!-- Vista de un tema -->
-      <section id="viewTheme" class="view">
-        <button class="btn btn-ghost back-btn" onclick="showThemes()">
-          <span class="material-icons-round">arrow_back</span> Volver a temas
+<header class="top">
+  <div class="top-in wrap">
+    <a class="brand" href="index.html" aria-label="Aprendizaje Infinito — inicio">
+      <svg class="inf" viewBox="0 0 200 100" aria-hidden="true">
+        <path class="inf-path" d="M25,50 C25,20 75,20 100,50 C125,80 175,80 175,50 C175,20 125,20 100,50 C75,80 25,80 25,50 Z"/>
+      </svg>
+      <span class="brand-name"><span>Aprendizaje&nbsp;</span><em>Infinito</em></span>
+    </a>
+    <div class="actions">
+      <div class="seg" role="group" aria-label="Modo de vista">
+        <button id="v-cards" title="Vista tarjetas" aria-label="Vista tarjetas">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5"/></svg>
         </button>
-        <div class="theme-header">
-          <span id="themeEmoji" class="theme-emoji">📖</span>
-          <h2 id="themeName">Tema</h2>
-          <button class="btn btn-ghost btn-sm" onclick="editCurrentTheme()" title="Editar Tema">
-            <span class="material-icons-round">edit</span>
-          </button>
-        </div>
-        <div class="tables-section">
-          <div class="tables-section-head">
-            <h3>Tus Tablas</h3>
-            <button id="btnNewTable" class="btn btn-primary">
-              <span class="material-icons-round">add_circle</span> Nueva tabla
-            </button>
-          </div>
-          <div id="tablesContainer" class="tables-container"></div>
-        </div>
-      </section>
-    </main>
-  </div>
-
-  <!-- Teclado Virtual Avanzado / Multilenguaje -->
-  <div id="virtualKeyboard" class="virtual-keyboard hidden">
-    <div class="vk-header">
-      <div class="vk-title-group">
-        <span class="material-icons-round">language</span>
-        <span class="vk-title">Símbolos e Idiomas</span>
+        <button id="v-list" title="Vista lista" aria-label="Vista lista">
+          <svg viewBox="0 0 24 24"><path d="M8.5 6h12M8.5 12h12M8.5 18h12M3.5 6h.5M3.5 12h.5M3.5 18h.5"/></svg>
+        </button>
       </div>
-      <select id="vkLayoutSelect" class="vk-select">
-        <optgroup label="Idiomas Asiáticos">
-          <option value="japanese_hiragana">Japonés (Hiragana)</option>
-          <option value="japanese_katakana">Japonés (Katakana)</option>
-          <option value="chinese_common">Chino (Ideogramas comunes)</option>
-          <option value="korean_hangul">Coreano (Hangul Jamo)</option>
-        </optgroup>
-        <optgroup label="Otros Idiomas y Fonética">
-          <option value="arabic">Árabe</option>
-          <option value="greek">Griego</option>
-          <option value="cyrillic">Cirílico (Ruso)</option>
-          <option value="ipa">IPA (Fonética)</option>
-        </optgroup>
-        <optgroup label="Ciencias y Acentos">
-          <option value="math">Matemáticas y Lógica</option>
-          <option value="accents">Acentos Especiales</option>
-        </optgroup>
-      </select>
-      <div class="vk-drag-handle material-icons-round" title="Arrastrar teclado">drag_indicator</div>
-      <button class="vk-close material-icons-round" onclick="toggleVirtualKeyboard()">close</button>
-    </div>
-    <!-- Buscador interno de símbolos rápidos -->
-    <div class="vk-search-container">
-      <span class="material-icons-round search-icon">search</span>
-      <input type="text" id="vkSearchInput" placeholder="Buscar símbolo (ej: alfa, k, integral)..." />
-    </div>
-    <div id="vkKeysContainer" class="vk-keys"></div>
-  </div>
-
-  <!-- Modales y Toasts -->
-  <div id="modalTheme" class="modal-overlay" hidden>
-    <div class="modal">
-      <div class="modal-head">
-        <h3>Nuevo tema</h3>
-        <button class="modal-close" onclick="closeModal('modalTheme')">×</button>
-      </div>
-      <div class="modal-body">
-        <label class="field">
-          <span>Emoji</span>
-          <input type="text" id="themeEmojiInput" maxlength="4" placeholder="📖" />
-        </label>
-        <label class="field">
-          <span>Nombre del tema</span>
-          <input type="text" id="themeNameInput" placeholder="Ej: Vocabulario Asiático" />
-        </label>
-      </div>
-      <div class="modal-foot">
-        <button class="btn btn-ghost" onclick="closeModal('modalTheme')">Cancelar</button>
-        <button class="btn btn-primary" onclick="createTheme()">Crear tema</button>
-      </div>
+      <button class="btn icon" id="btn-cats" title="Editar categorías" aria-label="Editar categorías">
+        <svg viewBox="0 0 24 24"><path d="M12.6 2.6 21.4 11.4a2 2 0 0 1 0 2.8l-7.2 7.2a2 2 0 0 1-2.8 0L2.6 12.6A2 2 0 0 1 2 11.2V4a2 2 0 0 1 2-2h7.2a2 2 0 0 1 1.4.6Z"/><circle cx="7.5" cy="7.5" r="1"/></svg>
+      </button>
+      <button class="btn icon" id="btn-mode" title="Modo claro / oscuro" aria-label="Cambiar modo">
+        <svg class="ico-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        <svg class="ico-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
+      </button>
+      <button class="btn primary" id="btn-new">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        <span>Nuevo tema</span>
+      </button>
     </div>
   </div>
+</header>
 
-  <div id="modalTable" class="modal-overlay" hidden>
-    <div class="modal modal-lg">
-      <div class="modal-head">
-        <h3>Nueva tabla</h3>
-        <button class="modal-close" onclick="closeModal('modalTable')">×</button>
+<div id="demo-banner" hidden>
+  Modo demostración con datos de ejemplo — coloca la URL <code>/exec</code> de tu Apps Script en
+  <code>API_URL</code> (al inicio del &lt;script&gt;) para conectar tu hoja.
+</div>
+
+<main class="wrap" id="main">
+  <div id="app">
+    <div class="page-head" id="page-head">
+      <h1>Biblioteca</h1><p id="stats"></p>
+    </div>
+    <div class="toolbar" id="toolbar">
+      <div class="search">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="q" type="text" placeholder="Buscar temas…" autocomplete="off">
       </div>
-      <div class="modal-body">
-        <div class="form-grid">
-          <label class="field">
-            <span>Título de la tabla</span>
-            <input type="text" id="tableTitleInput" placeholder="Ej: Caracteres Básicos" />
-          </label>
-          <label class="field">
-            <span>Número de columnas</span>
-            <input type="number" id="tableColsInput" min="1" max="10" value="3" />
-          </label>
-        </div>
+      <div class="chips" id="chips"></div>
+    </div>
+    <div id="content"></div>
+  </div>
+</main>
+
+<footer class="foot wrap">
+  <span>Aprendizaje <em>Infinito</em></span>
+  <span>El conocimiento que nunca se termina.</span>
+</footer>
+
+<!-- ═══ Diálogo: nuevo / editar tema ═══ -->
+<dialog id="dlg-module">
+  <form id="form-module" novalidate>
+    <div class="dlg-head">
+      <h3 id="m-title">Nuevo tema</h3>
+      <button type="button" class="dlg-x" data-close="dlg-module" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="dlg-body">
+      <div class="field">
+        <label for="f-nombre">Nombre del tema</label>
+        <input id="f-nombre" maxlength="60" placeholder="p. ej. Biología celular" required>
+      </div>
+      <div class="field-row">
         <div class="field">
-          <span>Encabezados (headers)</span>
-          <div id="headersList" class="headers-list"></div>
+          <label for="f-icono">Icono</label>
+          <div class="icon-input">
+            <span class="icon-preview" id="f-icono-preview"></span>
+            <input id="f-icono" placeholder="Emoji, URL de imagen o <svg>…" autocomplete="off">
+          </div>
+          <p class="hint">Acepta un emoji, la URL de una imagen o el código completo de un SVG.</p>
+        </div>
+        <div class="field color-side">
+          <label for="f-color">Color</label>
+          <input type="color" id="f-color" value="#a34a1d">
+          <div class="swatches" id="f-swatches"></div>
         </div>
       </div>
-      <div class="modal-foot">
-        <button class="btn btn-ghost" onclick="closeModal('modalTable')">Cancelar</button>
-        <button class="btn btn-primary" onclick="createTable()">Crear tabla</button>
+      <div class="field">
+        <label for="f-cat">Categoría</label>
+        <div class="cat-wrap">
+          <input id="f-cat" placeholder="Escribe una nueva o elige una existente…" autocomplete="off">
+          <div class="cat-list" id="f-cat-list"></div>
+        </div>
+        <p class="hint" id="f-cat-hint"></p>
+      </div>
+      <div class="field">
+        <label for="f-desc">Descripción</label>
+        <textarea id="f-desc" rows="3" maxlength="220" placeholder="De qué trata este tema…"></textarea>
       </div>
     </div>
-  </div>
-
-  <div id="modalConfirm" class="modal-overlay" hidden>
-    <div class="modal modal-sm">
-      <div class="modal-head">
-        <h3 id="confirmTitle">Confirmar</h3>
-      </div>
-      <div class="modal-body">
-        <p id="confirmMessage">¿Estás seguro?</p>
-      </div>
-      <div class="modal-foot">
-        <button class="btn btn-ghost" onclick="closeModal('modalConfirm')">Cancelar</button>
-        <button class="btn btn-danger" id="confirmAccept">Aceptar</button>
-      </div>
+    <div class="dlg-foot">
+      <button type="button" class="btn danger" id="f-delete" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6"/></svg>
+        Eliminar
+      </button>
+      <span class="grow"></span>
+      <button type="button" class="btn" data-close="dlg-module">Cancelar</button>
+      <button type="submit" class="btn primary" id="f-save">Guardar</button>
     </div>
+  </form>
+</dialog>
+
+<!-- ═══ Diálogo: categorías ═══ -->
+<dialog id="dlg-cats">
+  <div class="dlg-head">
+    <h3>Categorías</h3>
+    <button type="button" class="dlg-x" data-close="dlg-cats" aria-label="Cerrar">
+      <svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
   </div>
+  <div class="dlg-body" id="cats-list"></div>
+  <div class="dlg-foot">
+    <span class="cats-note">Renombrar una categoría la actualiza en todos los temas que la usan.</span>
+    <span class="grow"></span>
+    <button type="button" class="btn primary" data-close="dlg-cats">Listo</button>
+  </div>
+</dialog>
 
-  <div id="toast" class="toast" hidden></div>
-  <div id="loading" class="loading" hidden><div class="spinner"></div></div>
+<!-- ═══ Diálogo: confirmación ═══ -->
+<dialog id="dlg-confirm">
+  <div class="dlg-head"><h3 id="c-title"></h3></div>
+  <div class="dlg-body"><p id="c-body" style="font-size:14px;color:var(--muted);line-height:1.55"></p></div>
+  <div class="dlg-foot">
+    <span class="grow"></span>
+    <button type="button" class="btn" id="c-cancel">Cancelar</button>
+    <button type="button" class="btn danger" id="c-ok">Eliminar</button>
+  </div>
+</dialog>
 
-  <script src="config.js"></script>
-  <script src="app.js"></script>
-  <script>
-/* ===== Corrector visual (iconos + tarjetas). No toca lógica. ===== */
-(function () {
-  // Nombres de ligadura válidos: si un elemento contiene solo este texto,
-  // se le aplica la fuente de iconos (el texto se convierte en glifo solo).
-  var ICONS = ("add add_circle add_box delete delete_outline delete_forever edit edit_note " +
-    "arrow_upward arrow_downward arrow_back arrow_forward arrow_drop_up arrow_drop_down " +
-    "close cancel search keyboard save check check_circle table_chart grid_on grid_view " +
-    "view_list list more_vert more_horiz visibility visibility_off download file_download " +
-    "upload file_upload content_copy content_paste drag_indicator language open_in_new " +
-    "refresh sync settings info warning error help menu home star favorite bookmark share " +
-    "print folder description article code data_object functions calculate post_add " +
-    "playlist_add library_add note_add remove clear done undo redo expand_more expand_less " +
-    "chevron_right chevron_left first_page last_page keyboard_arrow_up keyboard_arrow_down " +
-    "keyboard_double_arrow_up keyboard_double_arrow_down text_fields title low_priority " +
-    "swap_vert swap_horiz sort move_up move_down upgrade").split(" ");
-  var SET = {}; ICONS.forEach(function (n) { SET[n] = 1; });
+<div id="toasts"></div>
 
-  // Palabras en español -> glifo por codepoint (texto oculto con CSS, DOM intacto)
-  var WORDS = {
-    "editar": "\ue3c9", "eliminar": "\ue872", "borrar": "\ue872", "quitar": "\ue872",
-    "subir": "\ue5d8", "bajar": "\ue5db", "subir fila": "\ue5d8", "bajar fila": "\ue5db",
-    "añadir": "\ue145", "anadir": "\ue145", "agregar": "\ue145",
-    "guardar": "\ue161", "cerrar": "\ue5cd", "cancelar": "\ue5cd", "buscar": "\ue8b6"
+<script>
+'use strict';
+/* ═══════════════════════════════════════════════════════════════
+   ⚙️  CONFIGURACIÓN — pega aquí la URL de tu Web App (termina en /exec)
+   ═══════════════════════════════════════════════════════════════ */
+const API_URL = "PEGA_AQUI_LA_URL_EXEC";
+
+/* ─────────── Utilidades ─────────── */
+const $  = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g,
+  c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* Normalización de categorías: sin acentos, minúsculas, la Ñ se conserva */
+const ACC = {'á':'a','à':'a','ä':'a','â':'a','ã':'a','é':'e','è':'e','ë':'e','ê':'e',
+  'í':'i','ì':'i','ï':'i','î':'i','ó':'o','ò':'o','ö':'o','ô':'o','õ':'o',
+  'ú':'u','ù':'u','ü':'u','û':'u','ç':'c','Á':'a','É':'e','Í':'i','Ó':'o','Ú':'u','Ü':'u','Ç':'c'};
+function normCat(s){
+  s = String(s == null ? '' : s).trim().replace(/\s+/g,' ');
+  let out = '';
+  for(const ch of s) out += ACC.hasOwnProperty(ch) ? ACC[ch] : ch;
+  return out.toLowerCase();
+}
+/* Rechaza parecidos: "ciencias" ↔ "ciencias naturales", "programación" ↔ "programacion" */
+function findCatConflict(value, pool, exclude){
+  const v = normCat(value);
+  if(!v) return null;
+  const seen = new Set();
+  for(const c of pool){
+    const e = normCat(c);
+    if(!e || seen.has(e)) continue;
+    seen.add(e);
+    if(exclude && e === normCat(exclude)) continue;
+    if(v === e) return {type:'exact', cat:e};
+    if(v.startsWith(e) || e.startsWith(v)) return {type:'similar', cat:e};
+  }
+  return null;
+}
+
+const PALETTE = ['#a34a1d','#3f6f4e','#8a3a52','#b08a2e','#56652a','#2f6076','#7d4a6f','#4d4a42'];
+const ICON_FALLBACK = '<svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15Z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg>';
+
+/* Renderiza el icono del tema: SVG inline, URL de imagen, emoji o iniciales */
+function renderIcon(raw){
+  const s = String(raw || '').trim();
+  if(/^<svg/i.test(s)){
+    const clean = s
+      .replace(/<script[\s\S]*?<\/script>/gi,'')
+      .replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi,'');
+    return `<span class="mod-icon">${clean}</span>`;
+  }
+  if(/^https?:\/\//i.test(s)){
+    return `<span class="mod-icon"><img src="${esc(s)}" alt="" loading="lazy"
+      onerror="this.parentElement.innerHTML='${ICON_FALLBACK.replace(/'/g,'&#39;')}'"></span>`;
+  }
+  if(s){
+    if(/\p{Extended_Pictographic}/u.test(s))
+      return `<span class="mod-icon">${esc([...s].slice(0,3).join(''))}</span>`;
+    const ini = s.split(/\s+/).map(w => w[0]).join('').slice(0,2).toUpperCase();
+    return `<span class="mod-icon">${esc(ini)}</span>`;
+  }
+  return `<span class="mod-icon">${ICON_FALLBACK}</span>`;
+}
+
+/* ─────────── Estado y caché local ─────────── */
+let state = { modules: [] };
+let cacheRev = null;
+let loading = true;
+const demoMode = !/^https?:\/\//i.test(API_URL || '');
+const CACHE_KEY = 'ai_cache_v1';
+const ui = {
+  view: localStorage.getItem('ai_view') || 'cards',
+  q: '',
+  cat: ''            // '' = todas, '__none' = sin categoría, o categoría normalizada
+};
+
+function readCache(){
+  try{ return JSON.parse(localStorage.getItem(CACHE_KEY)); }catch(_){ return null; }
+}
+function writeCache(modules, rev){
+  try{ localStorage.setItem(CACHE_KEY, JSON.stringify({ rev, ts: Date.now(), data:{ modules } })); }catch(_){}
+}
+function persistCache(){ if(cacheRev != null) writeCache(state.modules, cacheRev); }
+
+async function apiGet(params){
+  const r = await fetch(`${API_URL}?${params}`);
+  if(!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+async function apiPost(action, payload){
+  const r = await fetch(API_URL, {
+    method: 'POST',
+    headers: {'Content-Type':'text/plain;charset=utf-8'}, // evita el preflight CORS
+    body: JSON.stringify(Object.assign({ action }, payload))
+  });
+  if(!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+
+/* Carga inicial: caché primero; solo baja de la hoja si la revisión cambió */
+async function loadInitial(){
+  const cached = readCache();
+  if(cached && cached.data){
+    try{
+      const r = await apiGet('action=rev');
+      if(String(r.rev) === String(cached.rev)){
+        state = cached.data; cacheRev = cached.rev; return;
+      }
+    }catch(_){ /* sin conexión: usamos la copia local */
+      state = cached.data; cacheRev = cached.rev; return;
+    }
+  }
+  const r = await apiGet('action=all');
+  if(!r.ok) throw new Error(r.error || 'Error al leer la hoja');
+  state = { modules: r.modules }; cacheRev = String(r.rev); writeCache(r.modules, r.rev);
+}
+
+/* Mantenimiento silencioso cada 30 min: compara revisión local contra la hoja */
+async function syncTick(){
+  if(demoMode || loading) return;
+  try{
+    const r = await apiGet('action=rev');
+    if(String(r.rev) !== String(cacheRev)){
+      const all = await apiGet('action=all');
+      state = { modules: all.modules }; cacheRev = String(all.rev);
+      writeCache(all.modules, all.rev); render();
+    }else{
+      persistCache(); // backup de respaldo
+    }
+  }catch(_){ /* offline: la copia local sigue siendo la fuente */ }
+}
+
+/* ─────────── Mutaciones con reversión si fallan ─────────── */
+async function mutate(action, payload, { apply=null, onOk=null, msg='Guardado' } = {}){
+  const snap = JSON.stringify(state);
+  if(apply) apply();
+  render();
+  if(demoMode){ toast('Modo demostración: el cambio no se guarda', 'warn'); return true; }
+  try{
+    const r = await apiPost(action, payload);
+    if(!r.ok) throw new Error(r.error || 'Error del servidor');
+    cacheRev = String(r.rev); persistCache(); render();
+    if(onOk) onOk(r);
+    toast(msg, 'ok');
+    return true;
+  }catch(err){
+    state = JSON.parse(snap); render();
+    toast('No se pudo guardar: ' + (err.message || 'error de red'), 'err');
+    return false;
+  }
+}
+
+/* ─────────── Datos derivados ─────────── */
+function getModule(id){ return state.modules.find(m => m.id === id) || null; }
+function existingCats(){
+  const map = new Map();
+  for(const m of state.modules){
+    const c = m.categoria || '';
+    if(!c) continue;
+    const k = normCat(c);
+    if(!map.has(k)) map.set(k, { name: c, norm: k, count: 0 });
+    map.get(k).count++;
+  }
+  return [...map.values()].sort((a,b) => a.norm.localeCompare(b.norm, 'es'));
+}
+function visibleModules(){
+  const q = ui.q.trim().toLowerCase();
+  const list = state.modules.filter(m => {
+    const okq = !q || (m.nombre + ' ' + (m.descripcion || '') + ' ' + (m.categoria || '')).toLowerCase().includes(q);
+    const mc  = normCat(m.categoria || '');
+    const okc = !ui.cat || (ui.cat === '__none' ? !mc : mc === ui.cat);
+    return okq && okc;
+  });
+  list.sort((a,b) => {
+    const ca = a.categoria || '\uffff', cb = b.categoria || '\uffff';
+    return ca.localeCompare(cb, 'es') ||
+           a.nombre.localeCompare(b.nombre, 'es', { sensitivity:'base' });
+  });
+  return list;
+}
+
+/* ─────────── Render ─────────── */
+function render(){
+  if(loading){ renderSkeleton(); return; }
+  renderChips();
+  renderStats();
+  const list = visibleModules();
+  const hasAny = state.modules.length > 0;
+  $('#page-head').hidden = !hasAny;
+  $('#toolbar').hidden   = !hasAny;
+  $('#demo-banner').hidden = !demoMode;
+
+  const C = $('#content');
+  if(!hasAny){
+    C.innerHTML = `
+      <div class="hero">
+        <svg class="inf" viewBox="0 0 200 100" aria-hidden="true">
+          <path class="inf-path" d="M25,50 C25,20 75,20 100,50 C125,80 175,80 175,50 C175,20 125,20 100,50 C75,80 25,80 25,50 Z"/>
+        </svg>
+        <h1>Aprendizaje <em>Infinito</em></h1>
+        <p>Una biblioteca que crece contigo. Crea tu primer tema y empieza a construir conocimiento que nunca se termina.</p>
+        <button class="btn primary" id="hero-new">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          Crear el primer tema
+        </button>
+      </div>`;
+    $('#hero-new').onclick = () => openModuleDialog(null);
+    return;
+  }
+  if(!list.length){
+    C.innerHTML = `<p class="empty-note">Ningún tema coincide con la búsqueda.</p>`;
+    return;
+  }
+  let html = '', lastCat = null, gi = 0, groupCount = 0;
+  for(const m of list){
+    const cat = m.categoria || '';
+    if(cat !== lastCat){
+      if(lastCat !== null) html += ui.view === 'cards' ? '</div>' : '</div>';
+      gi++; groupCount = list.filter(x => (x.categoria || '') === cat).length;
+      html += `
+        <section class="group">
+          <div class="group-head">
+            <span class="g-num">${String(gi).padStart(2,'0')}</span>
+            <h2>${esc(cat || 'sin categoría')}</h2>
+            <span class="g-line"></span>
+            <span class="g-count">${groupCount} ${groupCount === 1 ? 'tema' : 'temas'}</span>
+          </div>
+          ${ui.view === 'cards' ? '<div class="grid">' : '<div class="rows">'}`
+      lastCat = cat;
+    }
+    html += ui.view === 'cards' ? cardHTML(m) : rowHTML(m);
+  }
+  html += '</div></section>';
+  C.innerHTML = html;
+}
+
+function cardHTML(m){
+  return `
+  <article class="card" data-href="tema.html?id=${esc(m.id)}" tabindex="0" role="link"
+           style="--c:${esc(m.color || PALETTE[0])}">
+    ${renderIcon(m.icono)}
+    <h3>${esc(m.nombre)}</h3>
+    <p>${esc(m.descripcion || 'Sin descripción todavía.')}</p>
+    <div class="card-meta">
+      ${m.categoria ? `<span class="cat">${esc(m.categoria)}</span>` : '<span></span>'}
+      <span>${m.tablas || 0} ${(m.tablas || 0) === 1 ? 'tabla' : 'tablas'}</span>
+    </div>
+    <button class="card-edit" data-edit="${esc(m.id)}" title="Editar tema" aria-label="Editar tema">
+      <svg viewBox="0 0 24 24"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+    </button>
+  </article>`;
+}
+
+function rowHTML(m, i){
+  return `
+  <div class="row-item" data-href="tema.html?id=${esc(m.id)}" tabindex="0" role="link"
+       style="--c:${esc(m.color || PALETTE[0])}">
+    <span class="idx">${String(i + 1).padStart(2,'0')}</span>
+    ${renderIcon(m.icono)}
+    <div style="min-width:0">
+      <div class="r-name">${esc(m.nombre)}</div>
+      <div class="r-desc">${esc(m.descripcion || '')}</div>
+    </div>
+    ${m.categoria ? `<span class="cat">${esc(m.categoria)}</span>` : '<span></span>'}
+    <button class="row-edit" data-edit="${esc(m.id)}" title="Editar tema" aria-label="Editar tema">
+      <svg viewBox="0 0 24 24"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+    </button>
+  </div>`;
+}
+
+function renderChips(){
+  const cats = existingCats();
+  const sinCat = state.modules.filter(m => !normCat(m.categoria)).length;
+  let html = `<button class="chip ${!ui.cat ? 'on' : ''}" data-cat="">Todas<b>${state.modules.length}</b></button>`;
+  for(const c of cats)
+    html += `<button class="chip ${ui.cat === c.norm ? 'on' : ''}" data-cat="${esc(c.norm)}">${esc(c.norm)}<b>${c.count}</b></button>`;
+  if(sinCat)
+    html += `<button class="chip ${ui.cat === '__none' ? 'on' : ''}" data-cat="__none">sin categoría<b>${sinCat}</b></button>`;
+  $('#chips').innerHTML = html;
+}
+
+function renderStats(){
+  const cats = existingCats().length;
+  const n = state.modules.length;
+  $('#stats').textContent = `${n} ${n === 1 ? 'tema' : 'temas'} · ${cats} ${cats === 1 ? 'categoría' : 'categorías'}`;
+}
+
+function renderSkeleton(){
+  $('#page-head').hidden = true; $('#toolbar').hidden = true;
+  $('#content').innerHTML =
+    `<div class="grid">${'<div class="skel"></div>'.repeat(8)}</div>`;
+}
+
+/* ─────────── Diálogo de tema ─────────── */
+let editingId = null;
+const dlgModule = $('#dlg-module');
+
+function catHint(value, exclude){
+  const box = $('#f-cat-hint');
+  const v = normCat(value);
+  if(!v){
+    box.textContent = 'Opcional — los temas sin categoría irán al final.';
+    box.className = 'hint'; return true;
+  }
+  const pool = state.modules.map(m => m.categoria || '');
+  const c = findCatConflict(value, pool, exclude);
+  if(!c){ box.textContent = `Nueva categoría: «${v}».`; box.className = 'hint ok'; return true; }
+  if(c.type === 'exact'){ box.textContent = 'Ya existe: los temas se agruparán juntos.'; box.className = 'hint ok'; return true; }
+  box.textContent = `Demasiado parecida a «${c.cat}» — elige otro nombre.`;
+  box.className = 'hint err'; return false;
+}
+
+function refreshIconPreview(){
+  const box = $('#f-icono-preview');
+  box.innerHTML = renderIcon($('#f-icono').value).replace('class="mod-icon"','class="icon-preview-inner"')
+    .replace('<span class="mod-icon">','').replace(/<\/span>$/,'');
+  box.style.setProperty('--pc', $('#f-color').value);
+}
+
+function renderSwatches(){
+  $('#f-swatches').innerHTML = PALETTE.map(c =>
+    `<button type="button" data-c="${c}" style="background:${c}" aria-label="Color ${c}"></button>`).join('');
+  $$('#f-swatches button').forEach(b => {
+    b.onclick = () => { $('#f-color').value = b.dataset.c; markSwatch(); refreshIconPreview(); };
+  });
+  markSwatch();
+}
+function markSwatch(){
+  const cur = $('#f-color').value.toLowerCase();
+  $$('#f-swatches button').forEach(b => b.classList.toggle('on', b.dataset.c.toLowerCase() === cur));
+}
+
+function openModuleDialog(id){
+  editingId = id;
+  const m = id ? getModule(id) : null;
+  $('#m-title').textContent  = m ? 'Editar tema' : 'Nuevo tema';
+  $('#f-nombre').value = m ? m.nombre : '';
+  $('#f-icono').value  = m ? (m.icono || '') : '';
+  $('#f-desc').value   = m ? (m.descripcion || '') : '';
+  $('#f-color').value  = m ? (m.color || PALETTE[0]) : PALETTE[state.modules.length % PALETTE.length];
+  $('#f-cat').value    = m ? (m.categoria || '') : (ui.cat && ui.cat !== '__none' ? ui.cat : '');
+  $('#f-delete').hidden = !m;
+  $('#f-cat-hint').textContent = '';
+  $('#f-cat-hint').className = 'hint';
+  renderSwatches();
+  refreshIconPreview();
+  catHint($('#f-cat').value, m ? m.categoria : '');
+  dlgModule.showModal();
+  setTimeout(() => $('#f-nombre').focus(), 60);
+}
+
+/* Sugerencias de categoría (select + texto libre a la vez) */
+const catInput = $('#f-cat'), catList = $('#f-cat-list');
+function showCatList(){
+  const q = normCat(catInput.value);
+  const cats = existingCats().filter(c => !q || c.norm.includes(q));
+  catList.innerHTML = cats.length
+    ? cats.map(c => `<button type="button" data-v="${esc(c.name)}">${esc(c.name)}<span>${c.count} ${c.count === 1 ? 'tema' : 'temas'}</span></button>`).join('')
+    : '';
+  catList.classList.toggle('open', cats.length > 0);
+  catList.querySelectorAll('button').forEach(b => {
+    b.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      catInput.value = b.dataset.v;
+      catList.classList.remove('open');
+      catHint(catInput.value, editingId ? (getModule(editingId)?.categoria || '') : '');
+    });
+  });
+}
+catInput.addEventListener('focus', showCatList);
+catInput.addEventListener('input', () => {
+  showCatList();
+  catHint(catInput.value, editingId ? (getModule(editingId)?.categoria || '') : '');
+});
+catInput.addEventListener('blur', () => setTimeout(() => catList.classList.remove('open'), 120));
+ $('#f-icono').addEventListener('input', refreshIconPreview);
+ $('#f-color').addEventListener('input', () => { markSwatch(); refreshIconPreview(); });
+
+ $('#form-module').addEventListener('submit', async e => {
+  e.preventDefault();
+  const nombre = $('#f-nombre').value.trim();
+  if(!nombre){ toast('Ponle un nombre al tema', 'warn'); return; }
+  const exclude = editingId ? (getModule(editingId)?.categoria || '') : '';
+  if(!catHint($('#f-cat').value, exclude)) return;   // bloquea categorías similares
+  const payload = {
+    nombre,
+    icono:       $('#f-icono').value.trim(),
+    descripcion: $('#f-desc').value.trim(),
+    color:       $('#f-color').value,
+    categoria:   normCat($('#f-cat').value)
   };
-  var TRASH = /\u{1F5D1}(\uFE0F|\u200D)?/u;
-
-  function ownText(el) {
-    var t = "", n = el.firstChild;
-    while (n) { if (n.nodeType === 3) t += n.textContent; n = n.nextSibling; }
-    return t.trim();
-  }
-  function iconFont(el) {
-    el.style.setProperty("font-family", "'Material Icons Round'", "important");
-    el.style.setProperty("font-weight", "normal", "important");
-    el.style.setProperty("font-style", "normal", "important");
-    el.style.setProperty("text-transform", "none", "important");
-    el.style.setProperty("letter-spacing", "normal", "important");
-    el.style.setProperty("font-feature-settings", "'liga'", "important");
-    el.style.setProperty("line-height", "1", "important");
-  }
-  function fixIcons() {
-    document.querySelectorAll("body *").forEach(function (el) {
-      if (el.dataset && el.dataset.fx) return;
-      if (el.closest && el.closest("pre,code,textarea,input,select,[contenteditable]")) return;
-      if (el.children.length) return;
-      var t = ownText(el); if (!t) return;
-      var low = t.toLowerCase();
-      if (SET[low]) { el.dataset.fx = "i"; iconFont(el); return; }
-      if (WORDS[low]) {
-        el.dataset.fx = "w";
-        el.classList.add("fx-ic");
-        el.style.setProperty("--fxcp", '"' + WORDS[low] + '"');
-        return;
-      }
-      if (TRASH.test(t) && t.replace(TRASH, "").trim() === "") {
-        el.dataset.fx = "w";
-        el.classList.add("fx-ic");
-        el.style.setProperty("--fxcp", '"\\e872"');
-      }
+  if(editingId){
+    await mutate('module.update', { id: editingId, ...payload }, {
+      apply(){ Object.assign(getModule(editingId), payload); },
+      msg: 'Tema actualizado'
+    });
+  }else{
+    const tmp = 'tmp_' + Date.now();
+    await mutate('module.create', payload, {
+      apply(){ state.modules.push({ id: tmp, creado: new Date().toISOString(), tablas: 0, ...payload }); },
+      onOk(r){
+        const m = state.modules.find(x => x.id === tmp);
+        if(m){ m.id = r.id; persistCache(); }
+      },
+      msg: 'Tema creado'
     });
   }
+  dlgModule.close();
+});
 
-  // Tarjetas: emoji grande, nombre bonito, UN control de borrado arriba-derecha
-  var PICT = /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{1F1E6}-\u{1F1FF}\u{2B00}-\u{2BFF}]/u;
-  var grid = document.getElementById("themesGrid");
-  function tuneCards() {
-    if (!grid) return;
-    grid.querySelectorAll(":scope > *").forEach(function (card) {
-      if (card.dataset.fxCard) return;
-      card.dataset.fxCard = "1";
-      var del = null, named = false;
-      card.querySelectorAll("*").forEach(function (el) {
-        if (del && del.contains(el)) return;
-        var cls = el.getAttribute("class") || "";
-        var txt = ownText(el);
-        if (/delete|trash|\u{1F5D1}|borrar|elimin|remov/i.test(txt + " " + cls)) {
-          var host = el.closest("button") || el;
-          if (!del) { del = host; host.classList.add("fx-del"); }
-          return;
-        }
-        if (el.children.length) return;
-        if (txt && txt.length <= 8 && PICT.test(txt)) { el.classList.add("fx-emoji"); return; }
-        if (!named && txt) { el.classList.add("fx-name"); named = true; }
-      });
-    });
+ $('#f-delete').addEventListener('click', async () => {
+  const m = getModule(editingId);
+  if(!m) return;
+  dlgModule.close();
+  const ok = await confirmDialog(`Eliminar «${m.nombre}»`,
+    `Se borrarán también sus ${m.tablas || 0} ${(m.tablas || 0) === 1 ? 'tabla' : 'tablas'}. Esta acción no se puede deshacer.`);
+  if(!ok) return;
+  await mutate('module.delete', { id: m.id }, {
+    apply(){ state.modules = state.modules.filter(x => x.id !== m.id); },
+    msg: 'Tema eliminado'
+  });
+});
+
+/* ─────────── Diálogo de categorías ─────────── */
+const dlgCats = $('#dlg-cats');
+function openCatsDialog(){
+  const cats = existingCats();
+  $('#cats-list').innerHTML = cats.length ? cats.map(c => `
+    <div class="cat-row" data-from="${esc(c.name)}">
+      <input value="${esc(c.name)}" aria-label="Renombrar ${esc(c.name)}">
+      <span class="use">${c.count} ${c.count === 1 ? 'tema' : 'temas'}</span>
+      <button type="button" class="save" title="Guardar nombre" aria-label="Guardar nombre">
+        <svg viewBox="0 0 24 24"><path d="m4 12 5 5L20 7"/></svg>
+      </button>
+    </div>`).join('')
+    : '<p class="cats-note">Todavía no hay categorías en uso.</p>';
+  $$('#cats-list .cat-row').forEach(row => {
+    const input = row.querySelector('input');
+    const from  = row.dataset.from;
+    input.addEventListener('input', () => input.classList.remove('bad'));
+    input.addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); doRename(from, input); } });
+    row.querySelector('.save').onclick = () => doRename(from, input);
+  });
+  dlgCats.showModal();
+}
+async function doRename(from, input){
+  const to = normCat(input.value);
+  const cur = normCat(from);
+  if(!to || to === cur){ input.value = cur || from; return; }
+  const conflict = findCatConflict(to, state.modules.map(m => m.categoria || ''), from);
+  if(conflict && conflict.type === 'similar'){
+    input.classList.add('bad');
+    toast(`«${to}» se parece a «${conflict.cat}»`, 'err');
+    return;
   }
+  const done = await mutate('category.rename', { from: cur, to }, {
+    apply(){ state.modules.forEach(m => { if(normCat(m.categoria || '') === cur) m.categoria = to; }); },
+    msg: 'Categoría renombrada'
+  });
+  if(done){ renderChips(); openCatsDialog(); }
+}
 
-  var pend = false;
-  new MutationObserver(function () {
-    if (pend) return; pend = true;
-    requestAnimationFrame(function () { pend = false; fixIcons(); tuneCards(); });
-  }).observe(document.documentElement, { childList: true, subtree: true });
-  fixIcons(); tuneCards();
+/* ─────────── Confirmación ─────────── */
+function confirmDialog(title, body, okLabel = 'Eliminar'){
+  return new Promise(res => {
+    $('#c-title').textContent = title;
+    $('#c-body').textContent  = body;
+    $('#c-ok').textContent    = okLabel;
+    const d = $('#dlg-confirm');
+    const ok = $('#c-ok'), cancel = $('#c-cancel');
+    const done = v => { d.close(); ok.onclick = cancel.onclick = d.onclose = null; res(v); };
+    ok.onclick     = () => done(true);
+    cancel.onclick = () => done(false);
+    d.onclose      = () => done(false);
+    d.showModal();
+  });
+}
+
+/* ─────────── Toasts ─────────── */
+function toast(msg, tone = 'ok'){
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.style.setProperty('--dot',
+    tone === 'err' ? '#e0705a' : tone === 'warn' ? '#d9a441' : 'var(--accent)');
+  t.textContent = msg;
+  $('#toasts').appendChild(t);
+  setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 320); }, 3400);
+}
+
+/* ─────────── Interacción general ─────────── */
+ $('#content').addEventListener('click', e => {
+  const btn = e.target.closest('[data-edit]');
+  if(btn){ openModuleDialog(btn.dataset.edit); return; }
+  const card = e.target.closest('[data-href]');
+  if(card) location.href = card.dataset.href;
+});
+ $('#content').addEventListener('keydown', e => {
+  if(e.key === 'Enter' && e.target.closest('[data-href]'))
+    location.href = e.target.closest('[data-href]').dataset.href;
+});
+ $('#q').addEventListener('input', e => { ui.q = e.target.value; render(); });
+ $('#chips').addEventListener('click', e => {
+  const chip = e.target.closest('.chip');
+  if(chip){ ui.cat = chip.dataset.cat; render(); }
+});
+ $('#btn-new').onclick  = () => openModuleDialog(null);
+ $('#btn-cats').onclick = openCatsDialog;
+
+function setView(v){
+  ui.view = v;
+  localStorage.setItem('ai_view', v);
+  $('#v-cards').classList.toggle('on', v === 'cards');
+  $('#v-list').classList.toggle('on', v === 'list');
+  render();
+}
+ $('#v-cards').onclick = () => setView('cards');
+ $('#v-list').onclick  = () => setView('list');
+
+ $('#btn-mode').onclick = () => {
+  const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = next;
+  localStorage.setItem('ai_theme', next);
+};
+ $$('[data-close]').forEach(b => b.onclick = () => $('#' + b.dataset.close).close());
+
+/* ─────────── Datos de demostración (solo si no hay API_URL) ─────────── */
+const DEMO_MODULES = [
+  { id:'d1', nombre:'Biología celular', color:'#3f6f4e', categoria:'ciencias', tablas:4,
+    icono:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="10" cy="11" r="3.2"/><circle cx="16.5" cy="16" r="1.4"/><path d="M15 6.5c1.8.6 3 1.8 3.6 3.4"/></svg>',
+    descripcion:'La unidad mínima de la vida: estructura, orgánulos y procesos fundamentales.' },
+  { id:'d2', nombre:'Álgebra lineal', color:'#2f6076', categoria:'matematicas', tablas:2,
+    icono:'<svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="2"/><path d="M9.5 3.5v17M15.5 3.5v17M3.5 9.5h17M3.5 15.5h17"/></svg>',
+    descripcion:'Vectores, matrices y transformaciones: el lenguaje de los datos.' },
+  { id:'d3', nombre:'Programación web', color:'#a34a1d', categoria:'tecnologia', tablas:5,
+    icono:'<svg viewBox="0 0 24 24"><path d="m8 8-4 4 4 4M16 8l4 4-4 4M13.5 5l-3 14"/></svg>',
+    descripcion:'HTML, CSS y JavaScript desde cero hasta construir tus propias páginas.' },
+  { id:'d4', nombre:'Historia universal', color:'#8a3a52', categoria:'humanidades', tablas:3,
+    icono:'<svg viewBox="0 0 24 24"><path d="M4 21h16M6 21V8m4 13V8m4 13V8m4 13V8M3.5 8 12 3l8.5 5Z"/></svg>',
+    descripcion:'De las primeras civilizaciones al mundo contemporáneo, en perspectiva.' },
+  { id:'d5', nombre:'Inglés B2', color:'#b08a2e', categoria:'idiomas', tablas:6,
+    icono:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 3.8 5.6 3.8 9S14.5 18.5 12 21c-2.5-2.5-3.8-5.6-3.8-9S9.5 5.5 12 3Z"/></svg>',
+    descripcion:'Gramática, vocabulario y expresiones para el nivel upper-intermediate.' },
+  { id:'d6', nombre:'Física cuántica', color:'#4d4a42', categoria:'ciencias', tablas:2,
+    icono:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><ellipse cx="12" cy="12" rx="9" ry="4"/><ellipse cx="12" cy="12" rx="9" ry="4" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="9" ry="4" transform="rotate(120 12 12)"/></svg>',
+    descripcion:'El mundo subatómico: superposición, entrelazamiento y probabilidad.' }
+];
+
+/* ─────────── Arranque ─────────── */
+(async function init(){
+  setView(ui.view);
+  if(demoMode){
+    $('#demo-banner').hidden = false;
+    state = { modules: DEMO_MODULES };
+    loading = false; render();
+    return;
+  }
+  try{
+    await loadInitial();
+  }catch(err){
+    loading = false;
+    $('#content').innerHTML = `
+      <div class="hero" style="padding-top:6vh">
+        <h1 style="font-size:26px">No se pudo conectar con la hoja</h1>
+        <p>${esc(err.message || 'Error de red')} — revisa que la URL de la Web App sea correcta y que el acceso sea público.</p>
+        <button class="btn primary" onclick="location.reload()">Reintentar</button>
+      </div>`;
+    return;
+  }
+  loading = false; render();
+  setInterval(syncTick, 30 * 60 * 1000);   // respaldo/comparación cada 30 minutos
 })();
 </script>
 </body>
