@@ -1,11 +1,9 @@
 <!DOCTYPE html>
 <!-- ═══════════════════════════════════════════════════════════════════
-     PLANTILLA DE TEMA — APRENDIZAJE INFINITO (v2 de la plantilla)
-     Novedades: celdas multilínea (Enter = salto, Ctrl+Enter = guardar),
-     columnas tipo CÓDIGO con resaltado/indentación/autocompletado
-     (CodeMirror 5 por CDN, cualquier lenguaje), cabeceras editables
-     (nombre + tipo + lenguaje) y anchos de columna arrastrables que se
-     guardan en el dispositivo.
+     PLANTILLA DE TEMA — APRENDIZAJE INFINITO (v3 de la plantilla)
+     v3: fix crash "modeInfo undefined" → cargador de CodeMirror con
+     doble CDN + timeout + degradación total sin errores; guardas en
+     todos los addons; fix clic en cabecera (ahora sí abre el diálogo).
      AL DUPLICAR: cambia SOLO SHEET_NAME abajo. ══════════════════════ -->
 <html lang="es" data-theme="dark">
 <head>
@@ -20,24 +18,8 @@ document.documentElement.dataset.theme =
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..700;1,9..144,400..700&family=Space+Grotesk:wght@400..700&display=swap" rel="stylesheet">
-
-<!-- CodeMirror 5 (resaltado + autocompletado). Si el CDN no está
-     disponible, la página degrada a texto plano sin romperse. -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/runmode/runmode.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/mode/meta.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/anyword-hint.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
-<script>
-if(window.CodeMirror){
-  CodeMirror.modeURL = "https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/%N/%N.min.js";
-}
-</script>
+<!-- CodeMirror NO se carga aquí: lo carga bootCM() con doble CDN y
+     degradación total. Si no hay red/CDN, la página funciona igual. -->
 
 <style>
 /* ═══════════ Base ═══════════ */
@@ -147,7 +129,8 @@ thead th{
   padding:10px 26px 10px 12px;border-bottom:1px solid var(--line);white-space:nowrap;
   overflow:hidden;text-overflow:ellipsis;cursor:text;user-select:none;
 }
-thead th.lock .h-label{cursor:text}
+thead th.lock{cursor:text}
+thead th.ops{cursor:default}
 th,td{padding:9px 12px;border-bottom:1px solid var(--line);text-align:left;font-size:13.5px}
 tbody tr:last-child td{border-bottom:none}
 tbody tr:not(.editing) td{background:var(--surface)}
@@ -218,7 +201,7 @@ th:hover .col-grip::after{background:var(--line)}
 tr.editing .CodeMirror{background:transparent}
 .cm-s-material-darker.CodeMirror{background:transparent;color:#ece6d6}
 
-/* ═══════════ Edición en línea (título/teoría) ═══════════ */
+/* ═══════════ Edición en línea ═══════════ */
 .inline-input{
   width:100%;font:inherit;font-size:14px;color:inherit;background:var(--surface2);
   border:1px solid var(--accent);border-radius:8px;padding:6px 10px;outline:none;
@@ -407,7 +390,7 @@ input:focus,textarea:focus,select:focus{border-color:var(--accent)}
         <datalist id="lang-list"></datalist>
       </div>
     </div>
-    <p class="hint" id="c-hint">Las columnas de código se editan con resaltado, indentación y
+    <p class="hint" id="c-hint" hidden>Las columnas de código se editan con resaltado, indentación y
     autocompletado (sugerencias al escribir o Ctrl+Espacio) en cualquier lenguaje.</p>
   </div>
   <div class="dlg-foot">
@@ -446,7 +429,6 @@ const $$ = s => [...document.querySelectorAll(s)];
 const esc = s => String(s ?? '').replace(/[&<>"']/g,
   c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const pad = n => String(n).padStart(2,'0');
-const HAS_CM = typeof CodeMirror !== 'undefined';
 const isDark = () => document.documentElement.dataset.theme === 'dark';
 
 const ACC = {'á':'a','à':'a','ä':'a','â':'a','ã':'a','é':'e','è':'e','ë':'e','ê':'e',
@@ -484,15 +466,83 @@ function renderIcon(raw){
   return `<span class="mod-icon">${ICON_FALLBACK}</span>`;
 }
 
-/* ─────────── CodeMirror: carga perezosa de cualquier lenguaje ─────────── */
+/* ═══════════════════════════════════════════════════════════════
+   CARGADOR DE CODEMIRROR (doble CDN + timeout + degradación)
+   Nunca lanza: si todo falla, HAS_CM queda false y las celdas de
+   código se editan como texto monoespaciado. Sin errores en consola.
+   ═══════════════════════════════════════════════════════════════ */
+const CM_V = '5.65.16';
+const CM_BASES = [
+  f => `https://cdnjs.cloudflare.com/ajax/libs/codemirror/${CM_V}/${f}`,
+  f => `https://cdn.jsdelivr.net/npm/codemirror@${CM_V}/${(f === 'codemirror.min.js' || f === 'codemirror.min.css') ? 'lib/' + f : f}`
+];
+let HAS_CM = false;
+
+function loadScript(src, ms = 8000){
+  return new Promise((res, rej) => {
+    const s = document.createElement('script');
+    const t = setTimeout(() => { s.remove(); rej(new Error('timeout')); }, ms);
+    s.src = src; s.async = false;
+    s.onload  = () => { clearTimeout(t); res(); };
+    s.onerror = () => { clearTimeout(t); s.remove(); rej(new Error('fallo')); };
+    document.head.appendChild(s);
+  });
+}
+function loadCSS(href){
+  const l = document.createElement('link');
+  l.rel = 'stylesheet'; l.href = href;
+  document.head.appendChild(l);
+}
+async function bootCM(){
+  /* CSS: sin bloquear (si falta un tema, quedan colores por defecto) */
+  ['codemirror.min.css','theme/material-darker.min.css','addon/hint/show-hint.min.css']
+    .forEach(f => {
+      const a = document.createElement('link');
+      a.rel = 'stylesheet'; a.href = CM_BASES[0](f);
+      a.onerror = () => { a.remove(); loadCSS(CM_BASES[1](f)); };
+      document.head.appendChild(a);
+    });
+  /* JS: secuencial y con fallback por archivo */
+  const files = ['codemirror.min.js','addon/runmode/runmode.min.js','addon/mode/meta.min.js',
+                 'addon/hint/show-hint.min.js','addon/hint/anyword-hint.min.js',
+                 'addon/edit/matchbrackets.min.js','addon/edit/closebrackets.min.js'];
+  let lastOk = 0;
+  for(const f of files){
+    let ok = false;
+    for(let i = 0; i < CM_BASES.length; i++){
+      try{ await loadScript(CM_BASES[i](f)); ok = true; lastOk = i; break; }
+      catch(_){ /* siguiente CDN */ }
+    }
+    if(!ok) return false;                       // sin CodeMirror → degradación
+    if(f === 'codemirror.min.js')
+      CodeMirror.modeURL = CM_BASES[lastOk]('mode/%N/%N.min.js');
+  }
+  return !!window.CodeMirror;
+}
+const cmReady = bootCM();
+
+/* Respaldo de lenguajes si el addon meta no llegara a cargar */
+const FALLBACK_LANGS = ['Python','JavaScript','TypeScript','HTML','XML','CSS','SCSS','JSON','SQL',
+  'Java','C','C++','C#','Go','Rust','PHP','Ruby','Swift','Kotlin','Dart','Shell','Bash','PowerShell',
+  'YAML','TOML','Markdown','R','MATLAB','Lua','Perl','Scala','Haskell','Elixir','Dockerfile','Nginx'];
+function populateLangList(){
+  let names = FALLBACK_LANGS;
+  if(HAS_CM && Array.isArray(CodeMirror.modeInfo))
+    names = CodeMirror.modeInfo.map(i => i.name).sort((a,b) => a.localeCompare(b,'es'));
+  $('#lang-list').innerHTML = names.map(n => `<option value="${esc(n)}">`).join('');
+}
+
+/* ─────────── CodeMirror: carga perezosa de modos ─────────── */
 const loadedModes = new Set(['null']);
 function findMode(lang){
-  if(!HAS_CM) return null;
-  return CodeMirror.findModeByName(lang || 'Plain Text') || null;
+  if(!HAS_CM || !CodeMirror.findModeByName) return null;
+  try{ return CodeMirror.findModeByName(lang || 'Plain Text') || null; }
+  catch(_){ return null; }
 }
 function loadMode(lang, cb){
   const info = findMode(lang);
-  if(!info || !info.mode || info.mode === 'null' || loadedModes.has(info.mode)){ cb && cb(info); return; }
+  if(!info || !info.mode || info.mode === 'null' ||
+     !CodeMirror.modeURL || loadedModes.has(info.mode)){ cb && cb(info); return; }
   const s = document.createElement('script');
   s.src = CodeMirror.modeURL.replace(/%N/g, info.mode);
   s.onload  = () => { loadedModes.add(info.mode); cb && cb(info); };
@@ -513,7 +563,6 @@ let ui = { q: '' };
 const demoMode = !/^https?:\/\//i.test(API_URL || '');
 const CACHE_KEY = 'ai_sheet_v1_' + SHEET_NAME.toLowerCase();
 
-/* Anchos de columna por tabla — memoria del dispositivo */
 const WKEY = 'ai_widths_v1_' + SHEET_NAME.toLowerCase();
 function readWidths(){ try{ return JSON.parse(localStorage.getItem(WKEY)) || {}; }catch(_){ return {}; } }
 let widths = readWidths();
@@ -707,7 +756,7 @@ function blockHTML(t, i){
         <thead><tr>
           ${t.headers.map((h,j) => `
             <th data-col="${j}" class="${j === 0 ? 'lock' : ''}"
-                title="Clic: nombre, tipo y lenguaje · Borde derecho: ancho (doble clic restablece)">
+                title="Clic: nombre, tipo y lenguaje · Borde derecho: arrastrar para ancho (doble clic restablece)">
               <span class="h-label">${esc(h.name)}</span>
               ${h.type === 'code' ? `<span class="col-badge" title="Columna de código: ${esc(h.lang || 'texto')}">‹› ${esc(h.lang || '')}</span>` : ''}
               ${j > 0 ? `<button class="col-x" data-act="del-col" data-col="${j}" title="Eliminar columna" aria-label="Eliminar columna">
@@ -770,16 +819,15 @@ function rowHTML(t, row){
   </tr>`;
 }
 
-/* Monta editores tras cada render */
+/* Monta editores tras cada render (con guardas por si falta un addon) */
 function autoGrow(ta){ ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; }
 function mountEditors(){
   $$('#content tr.editing .cell-input').forEach(autoGrow);
   if(!HAS_CM){
-    /* Sin CDN: las celdas de código se editan como textarea mono */
+    /* Degradación: las celdas de código se editan como textarea mono */
     $$('#content .code-editor').forEach(ta => {
       ta.hidden = false;
       ta.className = 'cell-input mono';
-      ta.style.fontFamily = 'ui-monospace,Menlo,Consolas,monospace';
       autoGrow(ta);
     });
     return;
@@ -795,31 +843,32 @@ function mountEditors(){
         matchBrackets: true,
         autoCloseBrackets: true,
         extraKeys: {
-          'Ctrl-Space': 'autocomplete',
-          'Cmd-Space':  'autocomplete',
+          'Ctrl-Space': cm2 => { if(CodeMirror.commands.autocomplete) cm2.execCommand('autocomplete'); },
+          'Cmd-Space':  cm2 => { if(CodeMirror.commands.autocomplete) cm2.execCommand('autocomplete'); },
           'Ctrl-Enter': cm2 => saveRowFromTr(cm2.getWrapperElement().closest('tr')),
           'Cmd-Enter':  cm2 => saveRowFromTr(cm2.getWrapperElement().closest('tr')),
           'Esc': () => render()
         }
       });
       cm.setSize('100%', 'auto');
-      /* Autocompletado suave mientras se escribe */
+      /* Autocompletado suave mientras se escribe (si el addon existe) */
       cm.on('inputRead', (inst, ch) => {
-        if(!ch.text || !ch.text[0] || !/[\w«"]/.test(ch.text[0])) return;
-        if(!inst.state.completionActive)
+        if(!ch.text || !ch.text[0] || !/[\w$]/.test(ch.text[0])) return;
+        if(inst.state.completionActive) return;
+        if(typeof inst.showHint === 'function' && CodeMirror.hint && CodeMirror.hint.anyword)
           inst.showHint({ hint: CodeMirror.hint.anyword, completeSingle: false });
       });
     });
   });
 }
 
-/* Resaltado de código en modo lectura */
+/* Resaltado de código en modo lectura (si runmode existe) */
 function highlightCodeViews(){
-  if(!HAS_CM) return;
+  if(!HAS_CM || typeof CodeMirror.runMode !== 'function') return;
   $$('#content .codeview[data-lang]').forEach(pre => {
     if(pre.dataset.done || !pre.dataset.lang) return;
     loadMode(pre.dataset.lang, () => {
-      CodeMirror.runMode(pre.textContent, cmModeOf(pre.dataset.lang), pre);
+      try{ CodeMirror.runMode(pre.textContent, cmModeOf(pre.dataset.lang), pre); }catch(_){ }
       pre.dataset.done = '1';
     });
   });
@@ -910,8 +959,9 @@ const dlgCol = $('#dlg-col');
 let colEdit = null;
 function openColDialog(tid, j){
   const t = getTable(tid); if(!t) return;
-  colEdit = { tid, j };
   const h = t.headers[j];
+  if(!h) return;
+  colEdit = { tid, j };
   $('#c-name').value = h.name;
   $('#c-type').value = h.type || 'text';
   $('#c-lang').value = h.lang || '';
@@ -934,7 +984,7 @@ function openColDialog(tid, j){
   let lang = $('#c-lang').value.trim();
   if(type === 'code'){
     if(!lang){ toast('Elige el lenguaje del código', 'warn'); return; }
-    if(HAS_CM && !CodeMirror.findModeByName(lang)){
+    if(HAS_CM && CodeMirror.findModeByName && !CodeMirror.findModeByName(lang)){
       toast('Lenguaje no reconocido — elige uno de la lista', 'warn'); return;
     }
   }else{
@@ -1035,6 +1085,8 @@ function toast(msg, tone = 'ok'){
 }
 
 /* ─────────── Interacción: clics ─────────── */
+let gripDrag = false;   /* evita que arrastrar el ancho abra el diálogo */
+
  $('#content').addEventListener('click', async e => {
   const actEl = e.target.closest('[data-act]');
   if(actEl){
@@ -1104,13 +1156,17 @@ function toast(msg, tone = 'ok'){
     return;
   }
 
-  /* Cabecera → diálogo de columna */
-  if(e.target.closest('.h-label')){
-    const th = e.target.closest('th');
+  /* FIX: clic directo sobre el th abre el diálogo de columna.
+     (Antes se escuchaba .h-label, que tiene pointer-events:none y
+     nunca recibía el clic — el diálogo no se abría jamás.) */
+  const th = e.target.closest('thead th');
+  if(th && !th.classList.contains('ops') && !gripDrag &&
+     !e.target.closest('.col-x') && !e.target.closest('.col-grip')){
     const block = th.closest('.tblock');
     openColDialog(block.dataset.table, Number(th.dataset.col));
     return;
   }
+
   const tt = e.target.closest('.t-title');
   if(tt){ startTitleEdit(tt.dataset.tid, tt); return; }
   const tx = e.target.closest('.t-theory');
@@ -1137,6 +1193,7 @@ function toast(msg, tone = 'ok'){
   const grip = e.target.closest('.col-grip');
   if(!grip || e.button !== 0) return;
   e.preventDefault();
+  gripDrag = true;
   const th    = grip.closest('th');
   const table = grip.closest('table');
   const tid   = grip.closest('.tblock').dataset.table;
@@ -1145,13 +1202,14 @@ function toast(msg, tone = 'ok'){
   const startX = e.clientX;
   const startW = th.getBoundingClientRect().width;
   const clamp = w => Math.max(60, Math.min(1200, Math.round(w)));
-  const move = ev => { col.style.width = clamp(startW + ev.clientX - startX) + 'px'; };
+  const move = ev => { if(col) col.style.width = clamp(startW + ev.clientX - startX) + 'px'; };
   const up = ev => {
     window.removeEventListener('pointermove', move);
     window.removeEventListener('pointerup', up);
     const w = clamp(startW + ev.clientX - startX);
     (widths[tid] = widths[tid] || {})[j] = w;
     saveWidths();
+    setTimeout(() => { gripDrag = false; }, 0);
   };
   window.addEventListener('pointermove', move);
   window.addEventListener('pointerup', up);
@@ -1214,12 +1272,9 @@ function screenError(title, bodyHtml){
 
 /* ─────────── Arranque ─────────── */
 (async function init(){
-  /* Lista completa de lenguajes para el diálogo de columna */
-  if(HAS_CM){
-    $('#lang-list').innerHTML = CodeMirror.modeInfo.slice()
-      .sort((a,b) => a.name.localeCompare(b.name))
-      .map(i => `<option value="${esc(i.name)}">`).join('');
-  }
+  renderSkeleton();
+  HAS_CM = await cmReady;   /* true/false — nunca lanza */
+  populateLangList();
   if(demoMode){
     state = {
       module: { id:'demo', nombre: THEME_TITLE || prettyName(SHEET_NAME), color:'#a34a1d',
