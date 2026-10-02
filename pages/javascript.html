@@ -1,14 +1,12 @@
 <!DOCTYPE html>
 <!-- ═══════════════════════════════════════════════════════════════════
-     PLANTILLA DE TEMA — APRENDIZAJE INFINITO (hoja propia por tema)
-     Para crear la página de un tema:
-       1. Duplica este archivo en pages/  (ej.: pages/python.html)
-       2. En el <script> de abajo cambia SOLO la constante SHEET_NAME
-          por el nombre EXACTO de la hoja del tema en el spreadsheet
-          (se creó sola al crear el tema: "Python" → hoja "python").
-     La página descarga ÚNICAMENTE esa hoja (nada de los demás temas)
-     y el título, icono, color, categoría y descripción salen del Index.
-     ═══════════════════════════════════════════════════════════════════ -->
+     PLANTILLA DE TEMA — APRENDIZAJE INFINITO (v2 de la plantilla)
+     Novedades: celdas multilínea (Enter = salto, Ctrl+Enter = guardar),
+     columnas tipo CÓDIGO con resaltado/indentación/autocompletado
+     (CodeMirror 5 por CDN, cualquier lenguaje), cabeceras editables
+     (nombre + tipo + lenguaje) y anchos de columna arrastrables que se
+     guardan en el dispositivo.
+     AL DUPLICAR: cambia SOLO SHEET_NAME abajo. ══════════════════════ -->
 <html lang="es" data-theme="dark">
 <head>
 <meta charset="UTF-8">
@@ -22,6 +20,25 @@ document.documentElement.dataset.theme =
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..700;1,9..144,400..700&family=Space+Grotesk:wght@400..700&display=swap" rel="stylesheet">
+
+<!-- CodeMirror 5 (resaltado + autocompletado). Si el CDN no está
+     disponible, la página degrada a texto plano sin romperse. -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/runmode/runmode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/mode/meta.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/anyword-hint.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
+<script>
+if(window.CodeMirror){
+  CodeMirror.modeURL = "https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/%N/%N.min.js";
+}
+</script>
+
 <style>
 /* ═══════════ Base ═══════════ */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -47,6 +64,7 @@ svg{display:block}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
 .wrap{width:100%;max-width:1800px;margin-inline:auto;padding-inline:clamp(10px,1.8vw,22px)}
 main{flex:1;padding-block:8px 46px}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
 
 /* ═══════════ Cabecera ═══════════ */
 .top{
@@ -78,7 +96,7 @@ main{flex:1;padding-block:8px 46px}
 [data-theme="light"] .ico-moon{display:none}
 [data-theme="dark"]  .ico-sun{display:none}
 
-/* ═══════════ Hero del tema ═══════════ */
+/* ═══════════ Hero ═══════════ */
 .hero-theme{display:flex;gap:18px;align-items:flex-start;padding:26px 0 20px;border-bottom:1px solid var(--line);margin-bottom:18px}
 .hero-theme .mod-icon{width:58px;height:58px;border-radius:16px;font-size:26px}
 .hero-theme .mod-icon svg{width:28px;height:28px}
@@ -115,31 +133,32 @@ main{flex:1;padding-block:8px 46px}
 }
 .t-title:hover{border-bottom-color:var(--line)}
 .tb-actions{margin-left:auto;display:flex;gap:4px}
-.t-theory{font-size:13.5px;color:var(--muted);line-height:1.65;margin-top:8px;max-width:100ch;cursor:text;border-bottom:1px dashed transparent}
+.t-theory{font-size:13.5px;color:var(--muted);line-height:1.65;margin-top:8px;max-width:100ch;cursor:text;border-bottom:1px dashed transparent;white-space:pre-wrap}
 .t-theory:hover{border-bottom-color:var(--line)}
 .t-theory.empty{color:var(--muted);opacity:.65;font-style:italic}
 .tb-stats{margin-left:auto;font-size:12px;color:var(--muted)}
 
+/* ═══════════ Tabla ═══════════ */
 .tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin-top:14px;background:var(--surface)}
-table{border-collapse:collapse;width:100%;min-width:560px}
+table{border-collapse:collapse;width:100%;min-width:560px;table-layout:fixed}
 thead th{
   position:relative;background:var(--surface2);font-weight:600;font-size:11.5px;
   letter-spacing:.05em;text-transform:uppercase;text-align:left;
-  padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap;cursor:text;
+  padding:10px 26px 10px 12px;border-bottom:1px solid var(--line);white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;cursor:text;user-select:none;
 }
-thead th.lock{cursor:default}
-tbody th{cursor:default}
+thead th.lock .h-label{cursor:text}
 th,td{padding:9px 12px;border-bottom:1px solid var(--line);text-align:left;font-size:13.5px}
 tbody tr:last-child td{border-bottom:none}
 tbody tr:not(.editing) td{background:var(--surface)}
 tbody tr:not(.editing):hover td{background:var(--row-hover)}
 tbody tr.editing td{background:var(--editing)}
-td.ops,th.ops{position:sticky;right:0;text-align:right;white-space:nowrap;min-width:76px}
-thead th.ops{cursor:default}
+td{vertical-align:top;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word}
+td.ops,th.ops{position:sticky;right:0;text-align:right;white-space:nowrap;width:76px;min-width:76px;padding:9px 8px}
 td.ops{border-left:1px solid var(--line)}
 .h-label{pointer-events:none}
 .col-x{
-  position:absolute;right:5px;top:50%;transform:translateY(-50%);
+  position:absolute;right:20px;top:50%;transform:translateY(-50%);
   width:18px;height:18px;border-radius:5px;display:flex;align-items:center;justify-content:center;
   color:var(--muted);opacity:0;transition:opacity .12s;pointer-events:auto;
 }
@@ -147,11 +166,19 @@ thead th:hover .col-x{opacity:1}
 .col-x:hover{color:#c04a35;background:var(--surface)}
 .col-x svg{width:10px;height:10px;stroke:currentColor;stroke-width:2.2;fill:none;stroke-linecap:round}
 @media (hover:none){.col-x{opacity:.5}}
-.cell-input{
-  width:100%;min-width:7ch;background:transparent;border:none;outline:none;
-  font:inherit;color:inherit;padding:1px 0;border-bottom:1px dashed transparent;
+.col-grip{
+  position:absolute;top:0;right:0;width:9px;height:100%;
+  cursor:col-resize;touch-action:none;pointer-events:auto;
 }
-.cell-input:focus{border-bottom-color:var(--accent)}
+.col-grip::after{
+  content:'';position:absolute;top:20%;bottom:20%;right:3px;width:2px;
+  border-radius:2px;background:transparent;transition:background .15s;
+}
+th:hover .col-grip::after{background:var(--line)}
+.col-badge{
+  position:absolute;left:12px;bottom:2px;font-size:8px;letter-spacing:.08em;
+  color:var(--accent);pointer-events:none;text-transform:uppercase;
+}
 .nul{color:var(--muted);opacity:.55}
 .op{
   width:27px;height:27px;border-radius:8px;display:inline-flex;align-items:center;
@@ -169,14 +196,35 @@ thead th:hover .col-x{opacity:1}
 .mini-btn:hover{color:var(--ink);border-color:var(--muted)}
 .mini-btn svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round}
 
-/* ═══════════ Edición en línea ═══════════ */
+/* ═══════════ Celdas: multilínea y código ═══════════ */
+.cell-input{
+  width:100%;background:transparent;border:none;outline:none;
+  font:inherit;color:inherit;resize:none;overflow:hidden;display:block;
+  border-bottom:1px dashed transparent;padding:1px 0;min-height:1.4em;
+}
+.cell-input:focus{border-bottom-color:var(--accent)}
+.codeview{
+  margin:0;white-space:pre-wrap;overflow-wrap:anywhere;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:12.5px;line-height:1.55;padding:1px 0;
+}
+.CodeMirror{
+  height:auto;background:transparent;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:12.5px;line-height:1.55;
+}
+.CodeMirror-scroll{min-height:1.4em}
+.CodeMirror-sizer{min-height:1.4em}
+tr.editing .CodeMirror{background:transparent}
+.cm-s-material-darker.CodeMirror{background:transparent;color:#ece6d6}
+
+/* ═══════════ Edición en línea (título/teoría) ═══════════ */
 .inline-input{
   width:100%;font:inherit;font-size:14px;color:inherit;background:var(--surface2);
   border:1px solid var(--accent);border-radius:8px;padding:6px 10px;outline:none;
 }
 textarea.inline-input{min-height:92px;resize:vertical;line-height:1.6}
 .edit-hint{display:block;font-size:10.5px;color:var(--muted);margin-top:5px;pointer-events:none}
-.h-inline{min-width:90px;padding:3px 7px;font-size:12.5px}
 
 /* ═══════════ Vacíos / carga ═══════════ */
 .empty-tables{
@@ -212,12 +260,12 @@ dialog[open]{animation:pop .22s cubic-bezier(.2,.9,.3,1.15)}
   display:block;font-size:10px;font-weight:600;letter-spacing:.09em;
   text-transform:uppercase;color:var(--muted);margin-bottom:6px;
 }
-input[type=text],input:not([type]),input[type=number],textarea{
+input[type=text],input:not([type]),input[type=number],textarea,select{
   font:inherit;font-size:14px;color:inherit;width:100%;
   background:var(--surface2);border:1px solid transparent;border-radius:10px;
   padding:9px 12px;outline:none;transition:border-color .15s;resize:vertical;
 }
-input:focus,textarea:focus{border-color:var(--accent)}
+input:focus,textarea:focus,select:focus{border-color:var(--accent)}
 .num-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .hint{font-size:11.5px;color:var(--muted);margin-top:5px}
 .h-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
@@ -320,7 +368,8 @@ input:focus,textarea:focus{border-color:var(--accent)}
       <div class="field">
         <label>Cabeceras — primera fila</label>
         <div class="h-grid" id="h-grid"></div>
-        <p class="hint">La primera columna es el nombre: ordena las filas alfabéticamente y no se puede eliminar.</p>
+        <p class="hint">La primera columna es el nombre: ordena las filas y no se puede eliminar.
+        Después, haz clic en cualquier cabecera para renombrarla o convertirla en columna de código.</p>
       </div>
     </div>
     <div class="dlg-foot">
@@ -331,9 +380,46 @@ input:focus,textarea:focus{border-color:var(--accent)}
   </form>
 </dialog>
 
+<!-- ═══ Diálogo: editar columna (nombre + tipo + lenguaje) ═══ -->
+<dialog id="dlg-col">
+  <div class="dlg-head">
+    <h3>Columna</h3>
+    <button type="button" class="dlg-x" data-close="dlg-col" aria-label="Cerrar">
+      <svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <div class="dlg-body">
+    <div class="field">
+      <label for="c-name">Nombre de la cabecera</label>
+      <input id="c-name" maxlength="60" autocomplete="off">
+    </div>
+    <div class="num-row">
+      <div class="field">
+        <label for="c-type">Tipo de contenido</label>
+        <select id="c-type">
+          <option value="text">Texto</option>
+          <option value="code">Código (resaltado)</option>
+        </select>
+      </div>
+      <div class="field" id="c-lang-field" hidden>
+        <label for="c-lang">Lenguaje</label>
+        <input id="c-lang" list="lang-list" placeholder="Escribe para buscar…" autocomplete="off">
+        <datalist id="lang-list"></datalist>
+      </div>
+    </div>
+    <p class="hint" id="c-hint">Las columnas de código se editan con resaltado, indentación y
+    autocompletado (sugerencias al escribir o Ctrl+Espacio) en cualquier lenguaje.</p>
+  </div>
+  <div class="dlg-foot">
+    <span class="grow"></span>
+    <button type="button" class="btn" data-close="dlg-col">Cancelar</button>
+    <button type="button" class="btn primary" id="col-save">Guardar columna</button>
+  </div>
+</dialog>
+
 <!-- ═══ Diálogo: confirmación ═══ -->
 <dialog id="dlg-confirm">
-  <div class="dlg-head"><h3 id="c-title"></h3></div>
+  <div class="dlg-head"><h3 id="c-title2"></h3></div>
   <div class="dlg-body"><p id="c-body" style="font-size:14px;color:var(--muted);line-height:1.55"></p></div>
   <div class="dlg-foot">
     <span class="grow"></span>
@@ -348,11 +434,7 @@ input:focus,textarea:focus{border-color:var(--accent)}
 'use strict';
 /* ═══════════════════════════════════════════════════════════════════
    ⚙️ CONFIGURACIÓN DE ESTA PÁGINA
-   ✏️  ÚNICO CAMBIO AL DUPLICAR: el nombre EXACTO de la HOJA del tema
-       en el spreadsheet (minúsculas, sin acentos; ej.: "python").
-       Esa hoja se creó sola al crear el tema desde el índice.
-       Esta página leerá y guardará SOLO en esa hoja.
-   THEME_TITLE (opcional): título visible si la hoja no está en el Index.
+   ✏️  ÚNICO CAMBIO AL DUPLICAR: el nombre EXACTO de la HOJA del tema.
    ═══════════════════════════════════════════════════════════════════ */
 const SHEET_NAME  = "javascript";
 const THEME_TITLE = "";
@@ -364,8 +446,9 @@ const $$ = s => [...document.querySelectorAll(s)];
 const esc = s => String(s ?? '').replace(/[&<>"']/g,
   c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const pad = n => String(n).padStart(2,'0');
+const HAS_CM = typeof CodeMirror !== 'undefined';
+const isDark = () => document.documentElement.dataset.theme === 'dark';
 
-/* Búsqueda sin acentos ni mayúsculas (conserva Ñ) */
 const ACC = {'á':'a','à':'a','ä':'a','â':'a','ã':'a','é':'e','è':'e','ë':'e','ê':'e',
   'í':'i','ì':'i','ï':'i','î':'i','ó':'o','ò':'o','ö':'o','ô':'o','õ':'o',
   'ú':'u','ù':'u','ü':'u','û':'u','ç':'c','Á':'a','É':'e','Í':'i','Ó':'o','Ú':'u','Ü':'u','Ç':'c'};
@@ -375,7 +458,6 @@ function normCat(s){
   for(const ch of s) out += ACC.hasOwnProperty(ch) ? ACC[ch] : ch;
   return out.toLowerCase();
 }
-/* Nombre bonito a partir de la hoja (fallback si el tema no está en el Index) */
 function prettyName(sheet){
   return (sheet || '').replace(/-/g,' ').replace(/\b\w/g, c => c.toUpperCase());
 }
@@ -402,7 +484,28 @@ function renderIcon(raw){
   return `<span class="mod-icon">${ICON_FALLBACK}</span>`;
 }
 
-/* ─────────── Estado y caché local (por hoja) ─────────── */
+/* ─────────── CodeMirror: carga perezosa de cualquier lenguaje ─────────── */
+const loadedModes = new Set(['null']);
+function findMode(lang){
+  if(!HAS_CM) return null;
+  return CodeMirror.findModeByName(lang || 'Plain Text') || null;
+}
+function loadMode(lang, cb){
+  const info = findMode(lang);
+  if(!info || !info.mode || info.mode === 'null' || loadedModes.has(info.mode)){ cb && cb(info); return; }
+  const s = document.createElement('script');
+  s.src = CodeMirror.modeURL.replace(/%N/g, info.mode);
+  s.onload  = () => { loadedModes.add(info.mode); cb && cb(info); };
+  s.onerror = () => cb && cb(info);
+  document.head.appendChild(s);
+}
+function cmModeOf(lang){
+  const info = findMode(lang);
+  return info ? (info.mime || info.mode) : 'null';
+}
+const CM_THEME = () => isDark() ? 'material-darker' : 'default';
+
+/* ─────────── Estado, caché y anchos guardados ─────────── */
 let state = { module: null, tables: [] };
 let cacheRev = null;
 let loading = true;
@@ -410,11 +513,31 @@ let ui = { q: '' };
 const demoMode = !/^https?:\/\//i.test(API_URL || '');
 const CACHE_KEY = 'ai_sheet_v1_' + SHEET_NAME.toLowerCase();
 
+/* Anchos de columna por tabla — memoria del dispositivo */
+const WKEY = 'ai_widths_v1_' + SHEET_NAME.toLowerCase();
+function readWidths(){ try{ return JSON.parse(localStorage.getItem(WKEY)) || {}; }catch(_){ return {}; } }
+let widths = readWidths();
+function saveWidths(){ try{ localStorage.setItem(WKEY, JSON.stringify(widths)); }catch(_){ } }
+
 function readCache(){ try{ return JSON.parse(localStorage.getItem(CACHE_KEY)); }catch(_){ return null; } }
 function writeCache(data, rev){
   try{ localStorage.setItem(CACHE_KEY, JSON.stringify({ rev, ts: Date.now(), data })); }catch(_){}
 }
 function persistCache(){ if(cacheRev != null) writeCache(state, cacheRev); }
+
+/* Cabeceras antiguas (strings) → objetos {name,type,lang} */
+function normalizeTables(tables){
+  (tables || []).forEach(t => {
+    t.headers = (t.headers || []).map(h =>
+      typeof h === 'string'
+        ? { name: h, type: 'text', lang: '' }
+        : { name: String(h.name || 'Columna'),
+            type: h.type === 'code' ? 'code' : 'text',
+            lang: String(h.lang || '') });
+    t.rows = (t.rows || []).map(r => ({ id: r.id, values: r.values || [], locked: !!r.locked }));
+  });
+  return tables;
+}
 
 async function apiGet(params){
   const r = await fetch(`${API_URL}?${params}`);
@@ -424,43 +547,44 @@ async function apiGet(params){
 async function apiPost(action, payload){
   const r = await fetch(API_URL, {
     method: 'POST',
-    headers: {'Content-Type':'text/plain;charset=utf-8'}, // evita el preflight CORS
+    headers: {'Content-Type':'text/plain;charset=utf-8'},
     body: JSON.stringify(Object.assign({ action }, payload))
   });
   if(!r.ok) throw new Error('HTTP ' + r.status);
   return r.json();
 }
 
-/* Descarga SOLO la hoja de este tema: caché primero; sheet si la revisión cambió */
 async function loadTheme(){
   const cached = readCache();
   if(cached && cached.data){
     try{
       const r = await apiGet('action=rev');
-      if(String(r.rev) === String(cached.rev)){ state = cached.data; cacheRev = cached.rev; return; }
-    }catch(_){ state = cached.data; cacheRev = cached.rev; return; }
+      if(String(r.rev) === String(cached.rev)){
+        state = cached.data; normalizeTables(state.tables); cacheRev = cached.rev; return;
+      }
+    }catch(_){
+      state = cached.data; normalizeTables(state.tables); cacheRev = cached.rev; return;
+    }
   }
   const r = await apiGet('action=theme&sheet=' + encodeURIComponent(SHEET_NAME));
   if(!r.ok) throw new Error(r.error || 'Error al cargar el tema');
-  state = { module: r.module || null, tables: r.tables || [] };
+  state = { module: r.module || null, tables: normalizeTables(r.tables || []) };
   cacheRev = String(r.rev);
   persistCache();
 }
 
-/* Re-sincroniza la hoja (tras table.create / row.add: el backend genera los ids) */
 async function refreshTheme(){
   if(demoMode) return;
   try{
     const r = await apiGet('action=theme&sheet=' + encodeURIComponent(SHEET_NAME));
     if(r.ok){
-      state = { module: r.module || null, tables: r.tables || [] };
+      state = { module: r.module || null, tables: normalizeTables(r.tables || []) };
       cacheRev = String(r.rev);
       persistCache(); render();
     }
   }catch(_){ }
 }
 
-/* Mantenimiento silencioso cada 30 min */
 async function syncTick(){
   if(demoMode || loading) return;
   try{
@@ -470,7 +594,6 @@ async function syncTick(){
   }catch(_){}
 }
 
-/* Mutación optimista con reversión si falla */
 async function mutate(action, payload, { apply=null, onOk=null, msg='Guardado' } = {}){
   const snap = JSON.stringify(state);
   if(apply) apply();
@@ -495,22 +618,23 @@ async function mutate(action, payload, { apply=null, onOk=null, msg='Guardado' }
 function getTable(id){ return state.tables.find(t => t.tableId === id) || null; }
 const byTitle = (a,b) => String(a.titulo).localeCompare(String(b.titulo),'es',{sensitivity:'base'});
 const sortedRows = t => [...t.rows].sort((a,b) =>
-  String(a.values[0]||'').localeCompare(String(b.values[0]||''),'es',{sensitivity:'base'}));
+  String(a.values[0]||'').trim().localeCompare(String(b.values[0]||'').trim(),'es',{sensitivity:'base'}));
 
 /* ─────────── Render ─────────── */
 function render(){
   if(loading){ renderSkeleton(); return; }
   renderHero();
   renderTables();
+  mountEditors();
+  highlightCodeViews();
 }
 
 function renderHero(){
   const m = state.module;
   const name = (m && m.nombre) || THEME_TITLE || prettyName(SHEET_NAME);
-  const color = (m && m.color) || '';
   document.title = name + ' — Aprendizaje Infinito';
   $('#hero').innerHTML = `
-    <section class="hero-theme" style="--c:${esc(color || 'var(--accent)')}">
+    <section class="hero-theme" style="--c:${esc((m && m.color) || 'var(--accent)')}">
       ${renderIcon(m && m.icono)}
       <div class="hero-main">
         <div class="meta-line">
@@ -560,6 +684,9 @@ function renderTables(){
 }
 
 function blockHTML(t, i){
+  const w = widths[t.tableId] || {};
+  const cols = t.headers.map((h,j) =>
+    `<col${w[j] ? ` style="width:${w[j]}px"` : ''}>`).join('') + '<col style="width:76px">';
   return `
   <section class="tblock" data-table="${esc(t.tableId)}">
     <div class="tb-head">
@@ -576,14 +703,17 @@ function blockHTML(t, i){
       : `<p class="t-theory empty" data-tid="${esc(t.tableId)}" title="Clic para añadir">+ Añadir teoría o descripción…</p>`}
     <div class="tbl-wrap">
       <table>
+        <colgroup>${cols}</colgroup>
         <thead><tr>
           ${t.headers.map((h,j) => `
             <th data-col="${j}" class="${j === 0 ? 'lock' : ''}"
-                title="${j === 0 ? 'Primera columna: fija, ordena las filas' : 'Clic para renombrar la cabecera'}">
-              <span class="h-label">${esc(h)}</span>
+                title="Clic: nombre, tipo y lenguaje · Borde derecho: ancho (doble clic restablece)">
+              <span class="h-label">${esc(h.name)}</span>
+              ${h.type === 'code' ? `<span class="col-badge" title="Columna de código: ${esc(h.lang || 'texto')}">‹› ${esc(h.lang || '')}</span>` : ''}
               ${j > 0 ? `<button class="col-x" data-act="del-col" data-col="${j}" title="Eliminar columna" aria-label="Eliminar columna">
                 <svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
               </button>` : ''}
+              <span class="col-grip" title="Arrastra para ajustar el ancho"></span>
             </th>`).join('')}
           <th class="ops"></th>
         </tr></thead>
@@ -604,19 +734,30 @@ function blockHTML(t, i){
   </section>`;
 }
 
+function displayCell(h, v){
+  if(h.type === 'code'){
+    return `<pre class="codeview ${isDark() ? 'cm-s-material-darker' : 'cm-s-default'}" data-lang="${esc(h.lang)}">${esc(v)}</pre>`;
+  }
+  return esc(v) || '<span class="nul">—</span>';
+}
+
 function rowHTML(t, row){
   const editable = !row.locked;
   return `
   <tr class="${editable ? 'editing' : ''}" data-rid="${esc(row.id)}">
     ${t.headers.map((h,j) => {
       const v = row.values[j] ?? '';
-      return editable
-        ? `<td><input class="cell-input" data-cell="${j}" value="${esc(v)}" ${j === 0 ? 'placeholder="Nombre…"' : ''}></td>`
-        : `<td>${esc(v) || '<span class="nul">—</span>'}</td>`;
+      if(!editable){
+        return `<td data-td="${j}">${displayCell(h, v)}</td>`;
+      }
+      if(h.type === 'code'){
+        return `<td data-td="${j}"><textarea class="code-editor" data-cell="${j}" data-lang="${esc(h.lang)}" hidden>${esc(v)}</textarea></td>`;
+      }
+      return `<td data-td="${j}"><textarea class="cell-input" data-cell="${j}" placeholder="${j === 0 ? 'Nombre…' : ''}">${esc(v)}</textarea></td>`;
     }).join('')}
     <td class="ops">
       ${editable
-        ? `<button class="op save" data-act="save-row" data-rid="${esc(row.id)}" title="Guardar fila" aria-label="Guardar fila">
+        ? `<button class="op save" data-act="save-row" title="Guardar fila (Ctrl+Enter)" aria-label="Guardar fila">
              <svg viewBox="0 0 24 24"><path d="m4 12 5 5L20 7"/></svg>
            </button>`
         : `<button class="op" data-act="edit-row" data-rid="${esc(row.id)}" title="Editar fila" aria-label="Editar fila">
@@ -629,6 +770,61 @@ function rowHTML(t, row){
   </tr>`;
 }
 
+/* Monta editores tras cada render */
+function autoGrow(ta){ ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; }
+function mountEditors(){
+  $$('#content tr.editing .cell-input').forEach(autoGrow);
+  if(!HAS_CM){
+    /* Sin CDN: las celdas de código se editan como textarea mono */
+    $$('#content .code-editor').forEach(ta => {
+      ta.hidden = false;
+      ta.className = 'cell-input mono';
+      ta.style.fontFamily = 'ui-monospace,Menlo,Consolas,monospace';
+      autoGrow(ta);
+    });
+    return;
+  }
+  $$('#content .code-editor').forEach(ta => {
+    const lang = ta.dataset.lang || 'Plain Text';
+    loadMode(lang, () => {
+      const cm = CodeMirror.fromTextArea(ta, {
+        mode: cmModeOf(lang),
+        theme: CM_THEME(),
+        lineWrapping: true,
+        viewportMargin: Infinity,
+        matchBrackets: true,
+        autoCloseBrackets: true,
+        extraKeys: {
+          'Ctrl-Space': 'autocomplete',
+          'Cmd-Space':  'autocomplete',
+          'Ctrl-Enter': cm2 => saveRowFromTr(cm2.getWrapperElement().closest('tr')),
+          'Cmd-Enter':  cm2 => saveRowFromTr(cm2.getWrapperElement().closest('tr')),
+          'Esc': () => render()
+        }
+      });
+      cm.setSize('100%', 'auto');
+      /* Autocompletado suave mientras se escribe */
+      cm.on('inputRead', (inst, ch) => {
+        if(!ch.text || !ch.text[0] || !/[\w«"]/.test(ch.text[0])) return;
+        if(!inst.state.completionActive)
+          inst.showHint({ hint: CodeMirror.hint.anyword, completeSingle: false });
+      });
+    });
+  });
+}
+
+/* Resaltado de código en modo lectura */
+function highlightCodeViews(){
+  if(!HAS_CM) return;
+  $$('#content .codeview[data-lang]').forEach(pre => {
+    if(pre.dataset.done || !pre.dataset.lang) return;
+    loadMode(pre.dataset.lang, () => {
+      CodeMirror.runMode(pre.textContent, cmModeOf(pre.dataset.lang), pre);
+      pre.dataset.done = '1';
+    });
+  });
+}
+
 function renderSkeleton(){
   $('#hero').innerHTML = `<div class="skel" style="height:120px"></div>`;
   $('#content').innerHTML = `
@@ -636,7 +832,31 @@ function renderSkeleton(){
     <div class="skel" style="height:280px;margin-top:22px"></div>`;
 }
 
-/* ─────────── Edición en línea: título / teoría / cabeceras ─────────── */
+/* ─────────── Guardar fila (lee textareas y CodeMirror) ─────────── */
+async function saveRowFromTr(tr){
+  if(!tr) return;
+  const tid = tr.closest('.tblock')?.dataset.table;
+  const t = getTable(tid); if(!t) return;
+  const rid = tr.dataset.rid;
+  const row = t.rows.find(x => x.id === rid); if(!row) return;
+  const values = t.headers.map((h,j) => {
+    const td = tr.querySelector(`td[data-td="${j}"]`);
+    if(!td) return row.values[j] ?? '';
+    if(h.type === 'code' && HAS_CM){
+      const cm = td.querySelector('.CodeMirror')?.CodeMirror;
+      if(cm) return cm.getValue();
+    }
+    return td.querySelector('textarea')?.value ?? '';
+  });
+  if(!values[0].trim()){
+    toast('La primera celda (nombre) no puede quedar vacía', 'warn');
+    return;
+  }
+  await mutate('row.update', { tableId: tid, rowId: rid, values, locked: true },
+    { apply(){ row.values = values; row.locked = true; }, msg: 'Fila guardada' });
+}
+
+/* ─────────── Edición en línea: título / teoría ─────────── */
 function startTitleEdit(tid, host){
   const t = getTable(tid); if(!t || host.querySelector('input')) return;
   const cur = t.titulo;
@@ -666,7 +886,7 @@ function startTextoEdit(tid, host){
   const cur = t.texto || '';
   host.innerHTML = '';
   const ta = document.createElement('textarea');
-  ta.className = 'inline-input'; ta.value = cur; ta.placeholder = 'Teoría, contexto o notas…';
+  ta.className = 'inline-input'; ta.value = cur; ta.placeholder = 'Teoría, contexto o notas… (multilínea)';
   host.appendChild(ta);
   host.insertAdjacentHTML('beforeend','<span class="edit-hint">Ctrl+Enter para guardar · Esc para cancelar</span>');
   ta.focus();
@@ -685,28 +905,47 @@ function startTextoEdit(tid, host){
   ta.addEventListener('blur', commit);
 }
 
-function startHeaderEdit(tid, j, span){
+/* ─────────── Diálogo de columna (nombre + tipo + lenguaje) ─────────── */
+const dlgCol = $('#dlg-col');
+let colEdit = null;
+function openColDialog(tid, j){
   const t = getTable(tid); if(!t) return;
-  const cur = t.headers[j] || '';
-  const input = document.createElement('input');
-  input.className = 'inline-input h-inline'; input.value = cur; input.maxLength = 60;
-  span.replaceWith(input);
-  input.focus(); input.select();
-  let done = false;
-  const commit = () => {
-    if(done) return; done = true;
-    const v = input.value.trim() || ('Columna ' + (j + 1));
-    if(v === cur){ render(); return; }
-    const nh = [...t.headers]; nh[j] = v;
-    mutate('table.meta', { tableId: tid, headers: nh },
-      { apply(){ t.headers = nh; }, msg: 'Cabecera actualizada' });
-  };
-  input.addEventListener('keydown', e => {
-    if(e.key === 'Enter'){ e.preventDefault(); input.blur(); }
-    if(e.key === 'Escape'){ done = true; render(); }
-  });
-  input.addEventListener('blur', commit);
+  colEdit = { tid, j };
+  const h = t.headers[j];
+  $('#c-name').value = h.name;
+  $('#c-type').value = h.type || 'text';
+  $('#c-lang').value = h.lang || '';
+  $('#c-lang-field').hidden = $('#c-type').value !== 'code';
+  $('#c-hint').hidden = $('#c-type').value !== 'code';
+  dlgCol.showModal();
+  setTimeout(() => $('#c-name').select(), 50);
 }
+ $('#c-type').addEventListener('change', () => {
+  const code = $('#c-type').value === 'code';
+  $('#c-lang-field').hidden = !code;
+  $('#c-hint').hidden = !code;
+});
+ $('#col-save').onclick = () => {
+  if(!colEdit) return;
+  const t = getTable(colEdit.tid); if(!t) return;
+  const name = $('#c-name').value.trim();
+  if(!name){ toast('La cabecera necesita un nombre', 'warn'); return; }
+  const type = $('#c-type').value;
+  let lang = $('#c-lang').value.trim();
+  if(type === 'code'){
+    if(!lang){ toast('Elige el lenguaje del código', 'warn'); return; }
+    if(HAS_CM && !CodeMirror.findModeByName(lang)){
+      toast('Lenguaje no reconocido — elige uno de la lista', 'warn'); return;
+    }
+  }else{
+    lang = '';
+  }
+  const nh = t.headers.map((h,i) => i === colEdit.j ? { name, type, lang } : h);
+  const tid = colEdit.tid;
+  mutate('table.meta', { tableId: tid, headers: nh },
+    { apply(){ t.headers = nh; }, msg: 'Columna actualizada' });
+  dlgCol.close(); colEdit = null;
+};
 
 /* ─────────── Diálogo: crear tabla ─────────── */
 const dlgTable = $('#dlg-table');
@@ -744,7 +983,7 @@ function openTableDialog(){
   if(!titulo){ toast('Ponle un título a la tabla', 'warn'); return; }
   const texto  = $('#f-texto').value.trim();
   const headers = [...hGrid.querySelectorAll('.h-input')]
-    .map((i,idx) => i.value.trim() || ('Columna ' + (idx + 1)));
+    .map((i,idx) => ({ name: i.value.trim() || ('Columna ' + (idx + 1)), type: 'text', lang: '' }));
   const nr = Math.max(0, Math.min(50, parseInt(fRows.value) || 0));
   const rows = Array.from({ length: nr }, () => Array(headers.length).fill(''));
   const tmp = 'tmp_' + Date.now().toString(36);
@@ -771,7 +1010,7 @@ function openTableDialog(){
 /* ─────────── Confirmación ─────────── */
 function confirmDialog(title, body, okLabel = 'Eliminar'){
   return new Promise(res => {
-    $('#c-title').textContent = title;
+    $('#c-title2').textContent = title;
     $('#c-body').textContent  = body;
     $('#c-ok').textContent    = okLabel;
     const d = $('#dlg-confirm');
@@ -795,7 +1034,7 @@ function toast(msg, tone = 'ok'){
   setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 320); }, 3400);
 }
 
-/* ─────────── Interacción ─────────── */
+/* ─────────── Interacción: clics ─────────── */
  $('#content').addEventListener('click', async e => {
   const actEl = e.target.closest('[data-act]');
   if(actEl){
@@ -814,21 +1053,15 @@ function toast(msg, tone = 'ok'){
     else if(act === 'add-col' && t){
       mutate('col.add',
         { tableId: tid, header: 'Nueva columna', at: t.headers.length },
-        { apply(){ t.headers.push('Nueva columna'); t.rows.forEach(r => r.values.push('')); },
+        { apply(){
+            t.headers.push({ name:'Nueva columna', type:'text', lang:'' });
+            t.rows.forEach(r => r.values.push(''));
+            delete widths[tid]; saveWidths();
+          },
           msg: 'Columna añadida' });
     }
     else if(act === 'save-row' && t){
-      const rid = actEl.dataset.rid;
-      const tr  = actEl.closest('tr');
-      const values = [...tr.querySelectorAll('.cell-input')].map(i => i.value);
-      if(!values[0].trim()){
-        toast('La primera celda (nombre) no puede quedar vacía', 'warn');
-        tr.querySelector('.cell-input')?.focus();
-        return;
-      }
-      const row = t.rows.find(x => x.id === rid); if(!row) return;
-      mutate('row.update', { tableId: tid, rowId: rid, values, locked: true },
-        { apply(){ row.values = values; row.locked = true; }, msg: 'Fila guardada' });
+      saveRowFromTr(actEl.closest('tr'));
     }
     else if(act === 'edit-row' && t){
       const row = t.rows.find(x => x.id === actEl.dataset.rid); if(!row) return;
@@ -838,7 +1071,7 @@ function toast(msg, tone = 'ok'){
     else if(act === 'del-row' && t){
       const row = t.rows.find(x => x.id === actEl.dataset.rid); if(!row) return;
       const ok = await confirmDialog('Eliminar fila',
-        `Se eliminará «${row.values[0] || '(sin nombre)'}» de esta tabla.`);
+        `Se eliminará «${String(row.values[0] || '').split('\n')[0] || '(sin nombre)'}» de esta tabla.`);
       if(!ok) return;
       mutate('row.delete', { tableId: tid, rowId: row.id },
         { apply(){ t.rows = t.rows.filter(x => x.id !== row.id); }, msg: 'Fila eliminada' });
@@ -847,10 +1080,14 @@ function toast(msg, tone = 'ok'){
       const j = Number(actEl.dataset.col);
       if(j < 1){ toast('La primera columna no se puede eliminar', 'warn'); return; }
       const ok = await confirmDialog('Eliminar columna',
-        `Se eliminará «${t.headers[j]}» y su contenido en todas las filas.`);
+        `Se eliminará «${t.headers[j].name}» y su contenido en todas las filas.`);
       if(!ok) return;
       mutate('col.delete', { tableId: tid, index: j },
-        { apply(){ t.headers.splice(j,1); t.rows.forEach(r => r.values.splice(j,1)); },
+        { apply(){
+            t.headers.splice(j,1);
+            t.rows.forEach(r => r.values.splice(j,1));
+            delete widths[tid]; saveWidths();
+          },
           msg: 'Columna eliminada' });
     }
     else if(act === 'del-table' && t){
@@ -858,18 +1095,20 @@ function toast(msg, tone = 'ok'){
         `Se eliminará «${t.titulo}» con sus ${t.rows.length} filas. Esta acción no se puede deshacer.`);
       if(!ok) return;
       mutate('table.delete', { tableId: tid },
-        { apply(){ state.tables = state.tables.filter(x => x.tableId !== tid); },
+        { apply(){
+            state.tables = state.tables.filter(x => x.tableId !== tid);
+            delete widths[tid]; saveWidths();
+          },
           msg: 'Tabla eliminada' });
     }
     return;
   }
 
-  /* Edición en línea */
-  const hx = e.target.closest('.h-label');
-  if(hx){
-    const th = hx.closest('th');
-    const block = hx.closest('.tblock');
-    startHeaderEdit(block.dataset.table, Number(th.dataset.col), hx);
+  /* Cabecera → diálogo de columna */
+  if(e.target.closest('.h-label')){
+    const th = e.target.closest('th');
+    const block = th.closest('.tblock');
+    openColDialog(block.dataset.table, Number(th.dataset.col));
     return;
   }
   const tt = e.target.closest('.t-title');
@@ -878,30 +1117,83 @@ function toast(msg, tone = 'ok'){
   if(tx){ startTextoEdit(tx.dataset.tid, tx); return; }
 });
 
+/* ─────────── Interacción: teclado y auto-altura ─────────── */
+ $('#content').addEventListener('keydown', e => {
+  const el = e.target;
+  if(el.classList?.contains('cell-input')){
+    if((e.ctrlKey || e.metaKey) && e.key === 'Enter'){
+      e.preventDefault(); saveRowFromTr(el.closest('tr'));
+    }else if(e.key === 'Escape'){
+      render();
+    }
+  }
+});
+ $('#content').addEventListener('input', e => {
+  if(e.target.classList?.contains('cell-input')) autoGrow(e.target);
+});
+
+/* ─────────── Anchos de columna: arrastrar para ajustar ─────────── */
+ $('#content').addEventListener('pointerdown', e => {
+  const grip = e.target.closest('.col-grip');
+  if(!grip || e.button !== 0) return;
+  e.preventDefault();
+  const th    = grip.closest('th');
+  const table = grip.closest('table');
+  const tid   = grip.closest('.tblock').dataset.table;
+  const j     = Number(th.dataset.col);
+  const col   = table.querySelectorAll('colgroup col')[j];
+  const startX = e.clientX;
+  const startW = th.getBoundingClientRect().width;
+  const clamp = w => Math.max(60, Math.min(1200, Math.round(w)));
+  const move = ev => { col.style.width = clamp(startW + ev.clientX - startX) + 'px'; };
+  const up = ev => {
+    window.removeEventListener('pointermove', move);
+    window.removeEventListener('pointerup', up);
+    const w = clamp(startW + ev.clientX - startX);
+    (widths[tid] = widths[tid] || {})[j] = w;
+    saveWidths();
+  };
+  window.addEventListener('pointermove', move);
+  window.addEventListener('pointerup', up);
+});
+ $('#content').addEventListener('dblclick', e => {
+  const grip = e.target.closest('.col-grip');
+  if(!grip) return;
+  const tid = grip.closest('.tblock').dataset.table;
+  const j   = Number(grip.closest('th').dataset.col);
+  if(widths[tid]){ delete widths[tid][j]; saveWidths(); }
+  render();
+});
+
  $('#q').addEventListener('input', e => { ui.q = e.target.value; renderTables(); });
 
  $('#btn-mode').onclick = () => {
-  const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+  const next = isDark() ? 'light' : 'dark';
   document.documentElement.dataset.theme = next;
   localStorage.setItem('ai_theme', next);
+  render();   /* re-pinta codeviews/editores con el tema correcto */
 };
  $$('[data-close]').forEach(b => b.onclick = () => $('#' + b.dataset.close).close());
 
 /* ─────────── Datos de demostración (solo si se borra API_URL) ─────────── */
 const DEMO_TABLES = [
   { tableId:'t1', titulo:'Funciones integradas',
-    texto:'Referencia rápida de funciones nativas del tema.',
-    headers:['Nombre','Ejemplo','Devuelve'],
+    texto:'Ejemplo con columna de código: haz clic en la cabecera «Código» para ver/editar su tipo y lenguaje.\nLas celdas admiten varias líneas: Enter salta, Ctrl+Enter guarda.',
+    headers:[
+      { name:'Nombre', type:'text', lang:'' },
+      { name:'Código', type:'code', lang:'Python' },
+      { name:'Notas',  type:'text', lang:'' }
+    ],
     rows:[
-      { id:'r1', values:['len','len("infinito")','8'], locked:true },
-      { id:'r2', values:['range','range(0,10,2)','0,2,4,6,8'], locked:true },
-      { id:'r3', values:['zip','zip(a,b)','pares'], locked:false }
+      { id:'r1', values:['saludo','def saludar(nombre):\n    """Devuelve un saludo."""\n    return f"Hola, {nombre}!"','Función básica'], locked:true },
+      { id:'r2', values:['fibonacci','def fib(n):\n    a, b = 0, 1\n    for _ in range(n):\n        a, b = b, a + b\n    return a','Iterativo, O(n)'], locked:false },
+      { id:'r3', values:['filtrar','pares = [x for x in nums if x % 2 == 0]','List comprehension'], locked:true }
     ]},
   { tableId:'t2', titulo:'Atajos de teclado', texto:'',
-    headers:['Atajo','Acción'],
+    headers:[{ name:'Atajo', type:'text', lang:'' }, { name:'Acción', type:'text', lang:'' }],
     rows:[
-      { id:'r4', values:['Ctrl+K','Buscar'], locked:true },
-      { id:'r5', values:['Ctrl+N','Nuevo elemento'], locked:false }
+      { id:'r4', values:['Ctrl+Enter','Guardar la fila en edición'], locked:true },
+      { id:'r5', values:['Ctrl+Espacio','Autocompletado en celdas de código'], locked:false }
     ]}
 ];
 
@@ -922,6 +1214,12 @@ function screenError(title, bodyHtml){
 
 /* ─────────── Arranque ─────────── */
 (async function init(){
+  /* Lista completa de lenguajes para el diálogo de columna */
+  if(HAS_CM){
+    $('#lang-list').innerHTML = CodeMirror.modeInfo.slice()
+      .sort((a,b) => a.name.localeCompare(b.name))
+      .map(i => `<option value="${esc(i.name)}">`).join('');
+  }
   if(demoMode){
     state = {
       module: { id:'demo', nombre: THEME_TITLE || prettyName(SHEET_NAME), color:'#a34a1d',
@@ -935,20 +1233,19 @@ function screenError(title, bodyHtml){
     await loadTheme();
   }catch(err){
     const msg = String(err.message || '');
-    if(/No existe la hoja/i.test(msg)){
+    if(/Ningún tema del Index usa la hoja/i.test(msg) || /No existe la hoja/i.test(msg)){
       screenError('Hoja no encontrada', `
-        <p>No existe la hoja <span class="file-path">${esc(SHEET_NAME)}</span> en el spreadsheet.</p>
-        <p>Crea el tema desde el índice con un nombre cuyo slug sea
-        <span class="file-path">${esc(SHEET_NAME)}</span> (la hoja se genera sola),
-        o crea la hoja a mano con las cabeceras:
-        <span class="file-path">tableId · titulo · texto · headers · rows · creado</span>.</p>`);
+        <p>La hoja <span class="file-path">${esc(SHEET_NAME)}</span> no corresponde a ningún tema.</p>
+        <p>Crea el tema desde el índice (su hoja se genera sola con el nombre
+        <span class="file-path">${esc(SHEET_NAME)}</span>), o revisa
+        <span class="file-path">SHEET_NAME</span> en este archivo.</p>`);
       return;
     }
     screenError('No se pudo cargar el tema', `<p>${esc(msg || 'Error de red')}</p>`);
     return;
   }
   loading = false; render();
-  setInterval(syncTick, 30 * 60 * 1000);   // respaldo/comparación cada 30 minutos
+  setInterval(syncTick, 30 * 60 * 1000);
 })();
 </script>
 </body>
