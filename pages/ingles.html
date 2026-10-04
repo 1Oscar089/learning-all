@@ -1,0 +1,1307 @@
+<!DOCTYPE html>
+<!-- ═══════════════════════════════════════════════════════════════════
+     PLANTILLA DE TEMA — APRENDIZAJE INFINITO (v3 de la plantilla)
+     v3: fix crash "modeInfo undefined" → cargador de CodeMirror con
+     doble CDN + timeout + degradación total sin errores; guardas en
+     todos los addons; fix clic en cabecera (ahora sí abre el diálogo).
+     AL DUPLICAR: cambia SOLO SHEET_NAME abajo. ══════════════════════ -->
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tema — Aprendizaje Infinito</title>
+<script>
+document.documentElement.dataset.theme =
+  localStorage.getItem('ai_theme') ||
+  (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..700;1,9..144,400..700&family=Space+Grotesk:wght@400..700&display=swap" rel="stylesheet">
+<!-- CodeMirror NO se carga aquí: lo carga bootCM() con doble CDN y
+     degradación total. Si no hay red/CDN, la página funciona igual. -->
+
+<style>
+/* ═══════════ Base ═══════════ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+[data-theme="light"]{
+  --bg:#f4f1e9; --surface:#fdfbf5; --surface2:#eae5d8; --ink:#1d1a14;
+  --muted:#7b7462; --line:#ddd6c3; --accent:#a34a1d;
+  --shadow:0 14px 34px rgba(30,25,12,.10); --row-hover:#efe9da; --editing:#f6eedd;
+}
+[data-theme="dark"]{
+  --bg:#15130d; --surface:#1e1b13; --surface2:#2a261a; --ink:#ece6d6;
+  --muted:#9c947d; --line:#332e20; --accent:#dd8143;
+  --shadow:0 14px 34px rgba(0,0,0,.45); --row-hover:#242015; --editing:#272115;
+}
+html{-webkit-text-size-adjust:100%}
+body{
+  font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--ink);
+  min-height:100dvh;display:flex;flex-direction:column;-webkit-font-smoothing:antialiased;
+  transition:background .25s,color .25s;
+}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+a{color:inherit;text-decoration:none}
+svg{display:block}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+.wrap{width:100%;max-width:1800px;margin-inline:auto;padding-inline:clamp(10px,1.8vw,22px)}
+main{flex:1;padding-block:8px 46px}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+
+/* ═══════════ Cabecera ═══════════ */
+.top{
+  position:sticky;top:0;z-index:40;
+  background:color-mix(in srgb,var(--bg) 82%,transparent);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--line);
+}
+.top-in{display:flex;align-items:center;justify-content:space-between;gap:10px;height:58px}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.brand .inf{width:38px;height:19px;color:var(--accent);flex:none;overflow:visible}
+.brand .inf-path{stroke-dasharray:460;stroke:currentColor;stroke-width:13;stroke-linecap:round;fill:none}
+.brand:hover .inf-path{animation:draw 1.4s cubic-bezier(.55,0,.25,1) forwards}
+@keyframes draw{from{stroke-dashoffset:460}to{stroke-dashoffset:0}}
+.brand-name{font-size:15px;font-weight:600;white-space:nowrap}
+.brand-name em{font-family:'Fraunces',serif;font-style:italic;font-weight:500;color:var(--accent)}
+.actions{display:flex;align-items:center;gap:8px}
+.btn{
+  display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);
+  background:var(--surface);border-radius:10px;padding:8px 14px;font-size:13.5px;
+  font-weight:500;transition:transform .15s,border-color .15s,opacity .15s;
+}
+.btn:hover{border-color:var(--muted)}
+.btn:active{transform:scale(.97)}
+.btn.primary{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.btn.primary:hover{opacity:.9}
+.btn.icon{padding:8px;border-radius:10px}
+.btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+[data-theme="light"] .ico-moon{display:none}
+[data-theme="dark"]  .ico-sun{display:none}
+
+/* ═══════════ Hero ═══════════ */
+.hero-theme{display:flex;gap:18px;align-items:flex-start;padding:26px 0 20px;border-bottom:1px solid var(--line);margin-bottom:18px}
+.hero-theme .mod-icon{width:58px;height:58px;border-radius:16px;font-size:26px}
+.hero-theme .mod-icon svg{width:28px;height:28px}
+.hero-theme .mod-icon img{width:34px;height:34px}
+.hero-main{min-width:0;flex:1}
+.meta-line{display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);margin-bottom:6px}
+.back{display:inline-flex;align-items:center;gap:5px;font-weight:500;color:var(--muted);transition:color .15s}
+.back:hover{color:var(--ink)}
+.cat-pill{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+.cat-pill i{width:7px;height:7px;border-radius:50%;background:var(--c,var(--accent))}
+.hero-theme h1{font-family:'Fraunces',serif;font-weight:600;font-size:clamp(28px,4vw,42px);letter-spacing:-.02em;line-height:1.1}
+.hero-desc{color:var(--muted);font-size:14px;line-height:1.6;max-width:75ch;margin-top:8px}
+
+/* ═══════════ Búsqueda ═══════════ */
+.toolbar{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:20px}
+.search{
+  display:flex;align-items:center;gap:8px;background:var(--surface);
+  border:1px solid var(--line);border-radius:999px;padding:8px 14px;min-width:min(320px,100%);
+}
+.search svg{width:15px;height:15px;stroke:var(--muted);fill:none;stroke-width:1.8;flex:none}
+.search input{border:none;background:none;outline:none;font:inherit;font-size:13.5px;color:inherit;width:100%}
+.t-count{font-size:12.5px;color:var(--muted);white-space:nowrap}
+
+/* ═══════════ Bloques de tabla ═══════════ */
+.tblock{
+  background:var(--surface);border:1px solid var(--line);border-radius:18px;
+  padding:20px 20px 14px;margin-bottom:22px;
+}
+.tb-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.tb-num{font-family:'Fraunces',serif;font-style:italic;color:var(--muted);font-size:15px;flex:none}
+.t-title{
+  font-family:'Fraunces',serif;font-weight:600;font-size:clamp(19px,2.2vw,23px);
+  letter-spacing:-.01em;cursor:text;border-bottom:1px dashed transparent;min-width:40px;
+}
+.t-title:hover{border-bottom-color:var(--line)}
+.tb-actions{margin-left:auto;display:flex;gap:4px}
+.t-theory{font-size:13.5px;color:var(--muted);line-height:1.65;margin-top:8px;max-width:100ch;cursor:text;border-bottom:1px dashed transparent;white-space:pre-wrap}
+.t-theory:hover{border-bottom-color:var(--line)}
+.t-theory.empty{color:var(--muted);opacity:.65;font-style:italic}
+.tb-stats{margin-left:auto;font-size:12px;color:var(--muted)}
+
+/* ═══════════ Tabla ═══════════ */
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin-top:14px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:560px;table-layout:fixed}
+thead th{
+  position:relative;background:var(--surface2);font-weight:600;font-size:11.5px;
+  letter-spacing:.05em;text-transform:uppercase;text-align:left;
+  padding:10px 26px 10px 12px;border-bottom:1px solid var(--line);white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;cursor:text;user-select:none;
+}
+thead th.lock{cursor:text}
+thead th.ops{cursor:default}
+th,td{padding:9px 12px;border-bottom:1px solid var(--line);text-align:left;font-size:13.5px}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:not(.editing) td{background:var(--surface)}
+tbody tr:not(.editing):hover td{background:var(--row-hover)}
+tbody tr.editing td{background:var(--editing)}
+td{vertical-align:top;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word}
+td.ops,th.ops{position:sticky;right:0;text-align:right;white-space:nowrap;width:76px;min-width:76px;padding:9px 8px}
+td.ops{border-left:1px solid var(--line)}
+.h-label{pointer-events:none}
+.col-x{
+  position:absolute;right:20px;top:50%;transform:translateY(-50%);
+  width:18px;height:18px;border-radius:5px;display:flex;align-items:center;justify-content:center;
+  color:var(--muted);opacity:0;transition:opacity .12s;pointer-events:auto;
+}
+thead th:hover .col-x{opacity:1}
+.col-x:hover{color:#c04a35;background:var(--surface)}
+.col-x svg{width:10px;height:10px;stroke:currentColor;stroke-width:2.2;fill:none;stroke-linecap:round}
+@media (hover:none){.col-x{opacity:.5}}
+.col-grip{
+  position:absolute;top:0;right:0;width:9px;height:100%;
+  cursor:col-resize;touch-action:none;pointer-events:auto;
+}
+.col-grip::after{
+  content:'';position:absolute;top:20%;bottom:20%;right:3px;width:2px;
+  border-radius:2px;background:transparent;transition:background .15s;
+}
+th:hover .col-grip::after{background:var(--line)}
+.col-badge{
+  position:absolute;left:12px;bottom:2px;font-size:8px;letter-spacing:.08em;
+  color:var(--accent);pointer-events:none;text-transform:uppercase;
+}
+.nul{color:var(--muted);opacity:.55}
+.op{
+  width:27px;height:27px;border-radius:8px;display:inline-flex;align-items:center;
+  justify-content:center;color:var(--muted);transition:color .12s,background .12s;
+}
+.op:hover{color:var(--ink);background:var(--surface2)}
+.op.save:hover{color:var(--accent)}
+.op.del:hover{color:#c04a35}
+.op svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.tb-foot{display:flex;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap}
+.mini-btn{
+  display:inline-flex;align-items:center;gap:6px;border:1px dashed var(--line);
+  border-radius:9px;padding:6px 12px;font-size:12.5px;color:var(--muted);transition:all .15s;
+}
+.mini-btn:hover{color:var(--ink);border-color:var(--muted)}
+.mini-btn svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round}
+
+/* ═══════════ Celdas: multilínea y código ═══════════ */
+.cell-input{
+  width:100%;background:transparent;border:none;outline:none;
+  font:inherit;color:inherit;resize:none;overflow:hidden;display:block;
+  border-bottom:1px dashed transparent;padding:1px 0;min-height:1.4em;
+}
+.cell-input:focus{border-bottom-color:var(--accent)}
+.codeview{
+  margin:0;white-space:pre-wrap;overflow-wrap:anywhere;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:12.5px;line-height:1.55;padding:1px 0;
+}
+.CodeMirror{
+  height:auto;background:transparent;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:12.5px;line-height:1.55;
+}
+.CodeMirror-scroll{min-height:1.4em}
+.CodeMirror-sizer{min-height:1.4em}
+tr.editing .CodeMirror{background:transparent}
+.cm-s-material-darker.CodeMirror{background:transparent;color:#ece6d6}
+
+/* ═══════════ Edición en línea ═══════════ */
+.inline-input{
+  width:100%;font:inherit;font-size:14px;color:inherit;background:var(--surface2);
+  border:1px solid var(--accent);border-radius:8px;padding:6px 10px;outline:none;
+}
+textarea.inline-input{min-height:92px;resize:vertical;line-height:1.6}
+.edit-hint{display:block;font-size:10.5px;color:var(--muted);margin-top:5px;pointer-events:none}
+
+/* ═══════════ Vacíos / carga ═══════════ */
+.empty-tables{
+  display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center;
+  border:1px dashed var(--line);border-radius:18px;padding:9vh 20px;color:var(--muted);
+}
+.empty-tables p{font-size:14.5px}
+.empty-note{color:var(--muted);font-size:13px;padding:34px 0;text-align:center}
+.file-path{
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;
+  background:var(--surface2);padding:2px 7px;border-radius:6px;color:var(--ink);
+}
+.skel{border-radius:18px;background:var(--surface2);animation:pulse 1.3s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.45}}
+
+/* ═══════════ Diálogos ═══════════ */
+dialog{
+  border:none;border-radius:18px;background:var(--surface);color:var(--ink);
+  width:min(560px,calc(100vw - 20px));padding:0;margin:auto;
+}
+dialog::backdrop{background:rgba(12,9,4,.55);backdrop-filter:blur(3px)}
+dialog[open]{animation:pop .22s cubic-bezier(.2,.9,.3,1.15)}
+@keyframes pop{from{opacity:0;transform:translateY(16px) scale(.98)}}
+.dlg-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px 0}
+.dlg-head h3{font-family:'Fraunces',serif;font-weight:600;font-size:20px}
+.dlg-x{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.dlg-x:hover{background:var(--surface2);color:var(--ink)}
+.dlg-x svg{width:15px;height:15px;stroke:currentColor;stroke-width:1.8;fill:none;stroke-linecap:round}
+.dlg-body{padding:16px 20px;display:flex;flex-direction:column;gap:14px;max-height:64vh;overflow-y:auto}
+.dlg-foot{display:flex;align-items:center;gap:9px;padding:14px 20px;border-top:1px solid var(--line)}
+.dlg-foot .grow{flex:1}
+.field label{
+  display:block;font-size:10px;font-weight:600;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--muted);margin-bottom:6px;
+}
+input[type=text],input:not([type]),input[type=number],textarea,select{
+  font:inherit;font-size:14px;color:inherit;width:100%;
+  background:var(--surface2);border:1px solid transparent;border-radius:10px;
+  padding:9px 12px;outline:none;transition:border-color .15s;resize:vertical;
+}
+input:focus,textarea:focus,select:focus{border-color:var(--accent)}
+.num-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.hint{font-size:11.5px;color:var(--muted);margin-top:5px}
+.h-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+
+/* ═══════════ Toasts ═══════════ */
+#toasts{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:100;display:flex;flex-direction:column;gap:8px;align-items:center;width:max-content;max-width:calc(100vw - 24px)}
+.toast{
+  display:flex;align-items:center;gap:9px;background:var(--ink);color:var(--bg);
+  font-size:13px;padding:10px 16px;border-radius:12px;box-shadow:var(--shadow);
+  animation:tin .25s cubic-bezier(.2,.9,.3,1.2);
+}
+.toast.out{opacity:0;transform:translateY(8px);transition:all .3s}
+.toast::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--dot,var(--accent));flex:none}
+@keyframes tin{from{opacity:0;transform:translateY(12px)}}
+
+/* ═══════════ Pie ═══════════ */
+.foot{
+  border-top:1px solid var(--line);padding-block:16px;display:flex;
+  justify-content:space-between;gap:10px;font-size:12px;color:var(--muted);flex-wrap:wrap;
+}
+.foot em{font-family:'Fraunces',serif}
+
+@media (max-width:560px){
+  .btn.primary span{display:none}
+  .btn.primary{padding:8px 11px}
+  .brand-name span{display:none}
+  .tblock{padding:16px 13px 11px}
+  .tb-stats{display:none}
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-in wrap">
+    <a class="brand" href="../index.html" aria-label="Volver al índice">
+      <svg class="inf" viewBox="0 0 200 100" aria-hidden="true">
+        <path class="inf-path" d="M25,50 C25,20 75,20 100,50 C125,80 175,80 175,50 C175,20 125,20 100,50 C75,80 25,80 25,50 Z"/>
+      </svg>
+      <span class="brand-name"><span>Aprendizaje&nbsp;</span><em>Infinito</em></span>
+    </a>
+    <div class="actions">
+      <button class="btn icon" id="btn-mode" title="Modo claro / oscuro" aria-label="Cambiar modo">
+        <svg class="ico-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        <svg class="ico-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
+      </button>
+      <button class="btn primary" id="btn-new-table">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        <span>Nueva tabla</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section id="hero"></section>
+  <div class="toolbar" id="toolbar" hidden>
+    <div class="search">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="text" placeholder="Buscar tablas por título…" autocomplete="off">
+    </div>
+    <p class="t-count" id="t-count"></p>
+  </div>
+  <div id="content"></div>
+</main>
+
+<footer class="foot wrap">
+  <span>Aprendizaje <em>Infinito</em></span>
+  <span>El conocimiento que nunca se termina.</span>
+</footer>
+
+<!-- ═══ Diálogo: crear tabla ═══ -->
+<dialog id="dlg-table">
+  <form id="form-table" novalidate>
+    <div class="dlg-head">
+      <h3>Nueva tabla</h3>
+      <button type="button" class="dlg-x" data-close="dlg-table" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="dlg-body">
+      <div class="field">
+        <label for="f-titulo">Título de la tabla</label>
+        <input id="f-titulo" maxlength="90" placeholder="p. ej. Métodos de array" required>
+      </div>
+      <div class="field">
+        <label for="f-texto">Teoría / descripción</label>
+        <textarea id="f-texto" rows="3" placeholder="Explicación, contexto o notas sobre esta tabla…"></textarea>
+      </div>
+      <div class="num-row">
+        <div class="field">
+          <label for="f-rows">Filas iniciales</label>
+          <input id="f-rows" type="number" min="0" max="50" value="3">
+        </div>
+        <div class="field">
+          <label for="f-cols">Columnas (cabeceras)</label>
+          <input id="f-cols" type="number" min="1" max="12" value="3">
+        </div>
+      </div>
+      <div class="field">
+        <label>Cabeceras — primera fila</label>
+        <div class="h-grid" id="h-grid"></div>
+        <p class="hint">La primera columna es el nombre: ordena las filas y no se puede eliminar.
+        Después, haz clic en cualquier cabecera para renombrarla o convertirla en columna de código.</p>
+      </div>
+    </div>
+    <div class="dlg-foot">
+      <span class="grow"></span>
+      <button type="button" class="btn" data-close="dlg-table">Cancelar</button>
+      <button type="submit" class="btn primary">Crear tabla</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- ═══ Diálogo: editar columna (nombre + tipo + lenguaje) ═══ -->
+<dialog id="dlg-col">
+  <div class="dlg-head">
+    <h3>Columna</h3>
+    <button type="button" class="dlg-x" data-close="dlg-col" aria-label="Cerrar">
+      <svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <div class="dlg-body">
+    <div class="field">
+      <label for="c-name">Nombre de la cabecera</label>
+      <input id="c-name" maxlength="60" autocomplete="off">
+    </div>
+    <div class="num-row">
+      <div class="field">
+        <label for="c-type">Tipo de contenido</label>
+        <select id="c-type">
+          <option value="text">Texto</option>
+          <option value="code">Código (resaltado)</option>
+        </select>
+      </div>
+      <div class="field" id="c-lang-field" hidden>
+        <label for="c-lang">Lenguaje</label>
+        <input id="c-lang" list="lang-list" placeholder="Escribe para buscar…" autocomplete="off">
+        <datalist id="lang-list"></datalist>
+      </div>
+    </div>
+    <p class="hint" id="c-hint" hidden>Las columnas de código se editan con resaltado, indentación y
+    autocompletado (sugerencias al escribir o Ctrl+Espacio) en cualquier lenguaje.</p>
+  </div>
+  <div class="dlg-foot">
+    <span class="grow"></span>
+    <button type="button" class="btn" data-close="dlg-col">Cancelar</button>
+    <button type="button" class="btn primary" id="col-save">Guardar columna</button>
+  </div>
+</dialog>
+
+<!-- ═══ Diálogo: confirmación ═══ -->
+<dialog id="dlg-confirm">
+  <div class="dlg-head"><h3 id="c-title2"></h3></div>
+  <div class="dlg-body"><p id="c-body" style="font-size:14px;color:var(--muted);line-height:1.55"></p></div>
+  <div class="dlg-foot">
+    <span class="grow"></span>
+    <button type="button" class="btn" id="c-cancel">Cancelar</button>
+    <button type="button" class="btn danger" id="c-ok">Eliminar</button>
+  </div>
+</dialog>
+
+<div id="toasts"></div>
+
+<script>
+'use strict';
+/* ═══════════════════════════════════════════════════════════════════
+   ⚙️ CONFIGURACIÓN DE ESTA PÁGINA
+   ✏️  ÚNICO CAMBIO AL DUPLICAR: el nombre EXACTO de la HOJA del tema.
+   ═══════════════════════════════════════════════════════════════════ */
+const SHEET_NAME  = "ingles";
+const THEME_TITLE = "";
+const API_URL = "https://script.google.com/macros/s/AKfycbxu8-qma-LPukPa1JmGj9uvdzmwOviz0fnULmu6ijPHTOng06H8tiHraAjQvuBUoONB/exec";
+
+/* ─────────── Utilidades ─────────── */
+const $  = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g,
+  c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad = n => String(n).padStart(2,'0');
+const isDark = () => document.documentElement.dataset.theme === 'dark';
+
+const ACC = {'á':'a','à':'a','ä':'a','â':'a','ã':'a','é':'e','è':'e','ë':'e','ê':'e',
+  'í':'i','ì':'i','ï':'i','î':'i','ó':'o','ò':'o','ö':'o','ô':'o','õ':'o',
+  'ú':'u','ù':'u','ü':'u','û':'u','ç':'c','Á':'a','É':'e','Í':'i','Ó':'o','Ú':'u','Ü':'u','Ç':'c'};
+function normCat(s){
+  s = String(s == null ? '' : s).trim().replace(/\s+/g,' ');
+  let out = '';
+  for(const ch of s) out += ACC.hasOwnProperty(ch) ? ACC[ch] : ch;
+  return out.toLowerCase();
+}
+function prettyName(sheet){
+  return (sheet || '').replace(/-/g,' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+const ICON_FALLBACK = '<svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15Z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg>';
+function renderIcon(raw){
+  const s = String(raw || '').trim();
+  if(/^<svg/i.test(s)){
+    const clean = s
+      .replace(/<script[\s\S]*?<\/script>/gi,'')
+      .replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi,'');
+    return `<span class="mod-icon">${clean}</span>`;
+  }
+  if(/^https?:\/\//i.test(s)){
+    return `<span class="mod-icon"><img src="${esc(s)}" alt="" loading="lazy"
+      onerror="this.parentElement.innerHTML='${ICON_FALLBACK.replace(/'/g,'&#39;')}'"></span>`;
+  }
+  if(s){
+    if(/\p{Extended_Pictographic}/u.test(s))
+      return `<span class="mod-icon">${esc([...s].slice(0,3).join(''))}</span>`;
+    const ini = s.split(/\s+/).map(w => w[0]).join('').slice(0,2).toUpperCase();
+    return `<span class="mod-icon">${esc(ini)}</span>`;
+  }
+  return `<span class="mod-icon">${ICON_FALLBACK}</span>`;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CARGADOR DE CODEMIRROR (doble CDN + timeout + degradación)
+   Nunca lanza: si todo falla, HAS_CM queda false y las celdas de
+   código se editan como texto monoespaciado. Sin errores en consola.
+   ═══════════════════════════════════════════════════════════════ */
+const CM_V = '5.65.16';
+const CM_BASES = [
+  f => `https://cdnjs.cloudflare.com/ajax/libs/codemirror/${CM_V}/${f}`,
+  f => `https://cdn.jsdelivr.net/npm/codemirror@${CM_V}/${(f === 'codemirror.min.js' || f === 'codemirror.min.css') ? 'lib/' + f : f}`
+];
+let HAS_CM = false;
+
+function loadScript(src, ms = 8000){
+  return new Promise((res, rej) => {
+    const s = document.createElement('script');
+    const t = setTimeout(() => { s.remove(); rej(new Error('timeout')); }, ms);
+    s.src = src; s.async = false;
+    s.onload  = () => { clearTimeout(t); res(); };
+    s.onerror = () => { clearTimeout(t); s.remove(); rej(new Error('fallo')); };
+    document.head.appendChild(s);
+  });
+}
+function loadCSS(href){
+  const l = document.createElement('link');
+  l.rel = 'stylesheet'; l.href = href;
+  document.head.appendChild(l);
+}
+async function bootCM(){
+  /* CSS: sin bloquear (si falta un tema, quedan colores por defecto) */
+  ['codemirror.min.css','theme/material-darker.min.css','addon/hint/show-hint.min.css']
+    .forEach(f => {
+      const a = document.createElement('link');
+      a.rel = 'stylesheet'; a.href = CM_BASES[0](f);
+      a.onerror = () => { a.remove(); loadCSS(CM_BASES[1](f)); };
+      document.head.appendChild(a);
+    });
+  /* JS: secuencial y con fallback por archivo */
+  const files = ['codemirror.min.js','addon/runmode/runmode.min.js','addon/mode/meta.min.js',
+                 'addon/hint/show-hint.min.js','addon/hint/anyword-hint.min.js',
+                 'addon/edit/matchbrackets.min.js','addon/edit/closebrackets.min.js'];
+  let lastOk = 0;
+  for(const f of files){
+    let ok = false;
+    for(let i = 0; i < CM_BASES.length; i++){
+      try{ await loadScript(CM_BASES[i](f)); ok = true; lastOk = i; break; }
+      catch(_){ /* siguiente CDN */ }
+    }
+    if(!ok) return false;                       // sin CodeMirror → degradación
+    if(f === 'codemirror.min.js')
+      CodeMirror.modeURL = CM_BASES[lastOk]('mode/%N/%N.min.js');
+  }
+  return !!window.CodeMirror;
+}
+const cmReady = bootCM();
+
+/* Respaldo de lenguajes si el addon meta no llegara a cargar */
+const FALLBACK_LANGS = ['Python','JavaScript','TypeScript','HTML','XML','CSS','SCSS','JSON','SQL',
+  'Java','C','C++','C#','Go','Rust','PHP','Ruby','Swift','Kotlin','Dart','Shell','Bash','PowerShell',
+  'YAML','TOML','Markdown','R','MATLAB','Lua','Perl','Scala','Haskell','Elixir','Dockerfile','Nginx'];
+function populateLangList(){
+  let names = FALLBACK_LANGS;
+  if(HAS_CM && Array.isArray(CodeMirror.modeInfo))
+    names = CodeMirror.modeInfo.map(i => i.name).sort((a,b) => a.localeCompare(b,'es'));
+  $('#lang-list').innerHTML = names.map(n => `<option value="${esc(n)}">`).join('');
+}
+
+/* ─────────── CodeMirror: carga perezosa de modos ─────────── */
+const loadedModes = new Set(['null']);
+function findMode(lang){
+  if(!HAS_CM || !CodeMirror.findModeByName) return null;
+  try{ return CodeMirror.findModeByName(lang || 'Plain Text') || null; }
+  catch(_){ return null; }
+}
+function loadMode(lang, cb){
+  const info = findMode(lang);
+  if(!info || !info.mode || info.mode === 'null' ||
+     !CodeMirror.modeURL || loadedModes.has(info.mode)){ cb && cb(info); return; }
+  const s = document.createElement('script');
+  s.src = CodeMirror.modeURL.replace(/%N/g, info.mode);
+  s.onload  = () => { loadedModes.add(info.mode); cb && cb(info); };
+  s.onerror = () => cb && cb(info);
+  document.head.appendChild(s);
+}
+function cmModeOf(lang){
+  const info = findMode(lang);
+  return info ? (info.mime || info.mode) : 'null';
+}
+const CM_THEME = () => isDark() ? 'material-darker' : 'default';
+
+/* ─────────── Estado, caché y anchos guardados ─────────── */
+let state = { module: null, tables: [] };
+let cacheRev = null;
+let loading = true;
+let ui = { q: '' };
+const demoMode = !/^https?:\/\//i.test(API_URL || '');
+const CACHE_KEY = 'ai_sheet_v1_' + SHEET_NAME.toLowerCase();
+
+const WKEY = 'ai_widths_v1_' + SHEET_NAME.toLowerCase();
+function readWidths(){ try{ return JSON.parse(localStorage.getItem(WKEY)) || {}; }catch(_){ return {}; } }
+let widths = readWidths();
+function saveWidths(){ try{ localStorage.setItem(WKEY, JSON.stringify(widths)); }catch(_){ } }
+
+function readCache(){ try{ return JSON.parse(localStorage.getItem(CACHE_KEY)); }catch(_){ return null; } }
+function writeCache(data, rev){
+  try{ localStorage.setItem(CACHE_KEY, JSON.stringify({ rev, ts: Date.now(), data })); }catch(_){}
+}
+function persistCache(){ if(cacheRev != null) writeCache(state, cacheRev); }
+
+/* Cabeceras antiguas (strings) → objetos {name,type,lang} */
+function normalizeTables(tables){
+  (tables || []).forEach(t => {
+    t.headers = (t.headers || []).map(h =>
+      typeof h === 'string'
+        ? { name: h, type: 'text', lang: '' }
+        : { name: String(h.name || 'Columna'),
+            type: h.type === 'code' ? 'code' : 'text',
+            lang: String(h.lang || '') });
+    t.rows = (t.rows || []).map(r => ({ id: r.id, values: r.values || [], locked: !!r.locked }));
+  });
+  return tables;
+}
+
+async function apiGet(params){
+  const r = await fetch(`${API_URL}?${params}`);
+  if(!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+async function apiPost(action, payload){
+  const r = await fetch(API_URL, {
+    method: 'POST',
+    headers: {'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify(Object.assign({ action }, payload))
+  });
+  if(!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+
+async function loadTheme(){
+  const cached = readCache();
+  if(cached && cached.data){
+    try{
+      const r = await apiGet('action=rev');
+      if(String(r.rev) === String(cached.rev)){
+        state = cached.data; normalizeTables(state.tables); cacheRev = cached.rev; return;
+      }
+    }catch(_){
+      state = cached.data; normalizeTables(state.tables); cacheRev = cached.rev; return;
+    }
+  }
+  const r = await apiGet('action=theme&sheet=' + encodeURIComponent(SHEET_NAME));
+  if(!r.ok) throw new Error(r.error || 'Error al cargar el tema');
+  state = { module: r.module || null, tables: normalizeTables(r.tables || []) };
+  cacheRev = String(r.rev);
+  persistCache();
+}
+
+async function refreshTheme(){
+  if(demoMode) return;
+  try{
+    const r = await apiGet('action=theme&sheet=' + encodeURIComponent(SHEET_NAME));
+    if(r.ok){
+      state = { module: r.module || null, tables: normalizeTables(r.tables || []) };
+      cacheRev = String(r.rev);
+      persistCache(); render();
+    }
+  }catch(_){ }
+}
+
+async function syncTick(){
+  if(demoMode || loading) return;
+  try{
+    const r = await apiGet('action=rev');
+    if(String(r.rev) !== String(cacheRev)) await refreshTheme();
+    else persistCache();
+  }catch(_){}
+}
+
+async function mutate(action, payload, { apply=null, onOk=null, msg='Guardado' } = {}){
+  const snap = JSON.stringify(state);
+  if(apply) apply();
+  render();
+  if(demoMode){ toast('Modo demostración: el cambio no se guarda', 'warn'); return true; }
+  try{
+    const r = await apiPost(action, Object.assign({ sheet: SHEET_NAME }, payload));
+    if(!r.ok) throw new Error(r.error || 'Error del servidor');
+    cacheRev = String(r.rev);
+    if(onOk) await onOk(r);
+    persistCache(); render();
+    toast(msg, 'ok');
+    return true;
+  }catch(err){
+    state = JSON.parse(snap); render();
+    toast('No se pudo guardar: ' + (err.message || 'error de red'), 'err');
+    return false;
+  }
+}
+
+/* ─────────── Derivados ─────────── */
+function getTable(id){ return state.tables.find(t => t.tableId === id) || null; }
+const byTitle = (a,b) => String(a.titulo).localeCompare(String(b.titulo),'es',{sensitivity:'base'});
+const sortedRows = t => [...t.rows].sort((a,b) =>
+  String(a.values[0]||'').trim().localeCompare(String(b.values[0]||'').trim(),'es',{sensitivity:'base'}));
+
+/* ─────────── Render ─────────── */
+function render(){
+  if(loading){ renderSkeleton(); return; }
+  renderHero();
+  renderTables();
+  mountEditors();
+  highlightCodeViews();
+}
+
+function renderHero(){
+  const m = state.module;
+  const name = (m && m.nombre) || THEME_TITLE || prettyName(SHEET_NAME);
+  document.title = name + ' — Aprendizaje Infinito';
+  $('#hero').innerHTML = `
+    <section class="hero-theme" style="--c:${esc((m && m.color) || 'var(--accent)')}">
+      ${renderIcon(m && m.icono)}
+      <div class="hero-main">
+        <div class="meta-line">
+          <a class="back" href="../index.html">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5m7-7-7 7 7 7"/></svg>
+            Índice
+          </a>
+          ${m && m.categoria ? `<span class="cat-pill"><i></i>${esc(m.categoria)}</span>` : ''}
+          <span>${state.tables.length} ${state.tables.length === 1 ? 'tabla' : 'tablas'}</span>
+          <span class="file-path" title="Hoja de este tema en el spreadsheet">${esc(SHEET_NAME)}</span>
+        </div>
+        <h1>${esc(name)}</h1>
+        ${m && m.descripcion ? `<p class="hero-desc">${esc(m.descripcion)}</p>` : ''}
+      </div>
+    </section>`;
+}
+
+function renderTables(){
+  const total = state.tables.length;
+  $('#toolbar').hidden = total === 0;
+  const q = normCat(ui.q.trim());
+  const list = state.tables
+    .filter(t => !q || normCat(t.titulo).includes(q))
+    .sort(byTitle);
+  $('#t-count').textContent = !total ? '' :
+    (q ? `${list.length} de ${total} ${total === 1 ? 'tabla' : 'tablas'}`
+       : `${total} ${total === 1 ? 'tabla' : 'tablas'} · orden alfabético`);
+
+  const C = $('#content');
+  if(total === 0){
+    C.innerHTML = `
+      <div class="empty-tables">
+        <p>Este tema todavía no tiene tablas.<br>Crea la primera para empezar a registrar conocimiento.</p>
+        <button class="btn primary" id="empty-new">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          Crear la primera tabla
+        </button>
+      </div>`;
+    $('#empty-new').onclick = () => openTableDialog();
+    return;
+  }
+  if(!list.length){
+    C.innerHTML = `<p class="empty-note">Ninguna tabla coincide con «${esc(ui.q)}».</p>`;
+    return;
+  }
+  C.innerHTML = list.map((t,i) => blockHTML(t,i)).join('');
+}
+
+function blockHTML(t, i){
+  const w = widths[t.tableId] || {};
+  const cols = t.headers.map((h,j) =>
+    `<col${w[j] ? ` style="width:${w[j]}px"` : ''}>`).join('') + '<col style="width:76px">';
+  return `
+  <section class="tblock" data-table="${esc(t.tableId)}">
+    <div class="tb-head">
+      <span class="tb-num">${pad(i+1)}</span>
+      <h2 class="t-title" data-tid="${esc(t.tableId)}" title="Clic para editar el título">${esc(t.titulo)}</h2>
+      <div class="tb-actions">
+        <button class="op del" data-act="del-table" title="Eliminar tabla" aria-label="Eliminar tabla">
+          <svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6"/></svg>
+        </button>
+      </div>
+    </div>
+    ${t.texto
+      ? `<p class="t-theory" data-tid="${esc(t.tableId)}" title="Clic para editar">${esc(t.texto)}</p>`
+      : `<p class="t-theory empty" data-tid="${esc(t.tableId)}" title="Clic para añadir">+ Añadir teoría o descripción…</p>`}
+    <div class="tbl-wrap">
+      <table>
+        <colgroup>${cols}</colgroup>
+        <thead><tr>
+          ${t.headers.map((h,j) => `
+            <th data-col="${j}" class="${j === 0 ? 'lock' : ''}"
+                title="Clic: nombre, tipo y lenguaje · Borde derecho: arrastrar para ancho (doble clic restablece)">
+              <span class="h-label">${esc(h.name)}</span>
+              ${h.type === 'code' ? `<span class="col-badge" title="Columna de código: ${esc(h.lang || 'texto')}">‹› ${esc(h.lang || '')}</span>` : ''}
+              ${j > 0 ? `<button class="col-x" data-act="del-col" data-col="${j}" title="Eliminar columna" aria-label="Eliminar columna">
+                <svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+              </button>` : ''}
+              <span class="col-grip" title="Arrastra para ajustar el ancho"></span>
+            </th>`).join('')}
+          <th class="ops"></th>
+        </tr></thead>
+        <tbody>
+          ${sortedRows(t).map(r => rowHTML(t, r)).join('')}
+        </tbody>
+      </table>
+    </div>
+    <div class="tb-foot">
+      <button class="mini-btn" data-act="add-row">
+        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Fila
+      </button>
+      <button class="mini-btn" data-act="add-col">
+        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Columna
+      </button>
+      <span class="tb-stats">${t.rows.length} ${t.rows.length === 1 ? 'fila' : 'filas'} · ${t.headers.length} columnas</span>
+    </div>
+  </section>`;
+}
+
+function displayCell(h, v){
+  if(h.type === 'code'){
+    return `<pre class="codeview ${isDark() ? 'cm-s-material-darker' : 'cm-s-default'}" data-lang="${esc(h.lang)}">${esc(v)}</pre>`;
+  }
+  return esc(v) || '<span class="nul">—</span>';
+}
+
+function rowHTML(t, row){
+  const editable = !row.locked;
+  return `
+  <tr class="${editable ? 'editing' : ''}" data-rid="${esc(row.id)}">
+    ${t.headers.map((h,j) => {
+      const v = row.values[j] ?? '';
+      if(!editable){
+        return `<td data-td="${j}">${displayCell(h, v)}</td>`;
+      }
+      if(h.type === 'code'){
+        return `<td data-td="${j}"><textarea class="code-editor" data-cell="${j}" data-lang="${esc(h.lang)}" hidden>${esc(v)}</textarea></td>`;
+      }
+      return `<td data-td="${j}"><textarea class="cell-input" data-cell="${j}" placeholder="${j === 0 ? 'Nombre…' : ''}">${esc(v)}</textarea></td>`;
+    }).join('')}
+    <td class="ops">
+      ${editable
+        ? `<button class="op save" data-act="save-row" title="Guardar fila (Ctrl+Enter)" aria-label="Guardar fila">
+             <svg viewBox="0 0 24 24"><path d="m4 12 5 5L20 7"/></svg>
+           </button>`
+        : `<button class="op" data-act="edit-row" data-rid="${esc(row.id)}" title="Editar fila" aria-label="Editar fila">
+             <svg viewBox="0 0 24 24"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+           </button>
+           <button class="op del" data-act="del-row" data-rid="${esc(row.id)}" title="Eliminar fila" aria-label="Eliminar fila">
+             <svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6"/></svg>
+           </button>`}
+    </td>
+  </tr>`;
+}
+
+/* Monta editores tras cada render (con guardas por si falta un addon) */
+function autoGrow(ta){ ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; }
+function mountEditors(){
+  $$('#content tr.editing .cell-input').forEach(autoGrow);
+  if(!HAS_CM){
+    /* Degradación: las celdas de código se editan como textarea mono */
+    $$('#content .code-editor').forEach(ta => {
+      ta.hidden = false;
+      ta.className = 'cell-input mono';
+      autoGrow(ta);
+    });
+    return;
+  }
+  $$('#content .code-editor').forEach(ta => {
+    const lang = ta.dataset.lang || 'Plain Text';
+    loadMode(lang, () => {
+      const cm = CodeMirror.fromTextArea(ta, {
+        mode: cmModeOf(lang),
+        theme: CM_THEME(),
+        lineWrapping: true,
+        viewportMargin: Infinity,
+        matchBrackets: true,
+        autoCloseBrackets: true,
+        extraKeys: {
+          'Ctrl-Space': cm2 => { if(CodeMirror.commands.autocomplete) cm2.execCommand('autocomplete'); },
+          'Cmd-Space':  cm2 => { if(CodeMirror.commands.autocomplete) cm2.execCommand('autocomplete'); },
+          'Ctrl-Enter': cm2 => saveRowFromTr(cm2.getWrapperElement().closest('tr')),
+          'Cmd-Enter':  cm2 => saveRowFromTr(cm2.getWrapperElement().closest('tr')),
+          'Esc': () => render()
+        }
+      });
+      cm.setSize('100%', 'auto');
+      /* Autocompletado suave mientras se escribe (si el addon existe) */
+      cm.on('inputRead', (inst, ch) => {
+        if(!ch.text || !ch.text[0] || !/[\w$]/.test(ch.text[0])) return;
+        if(inst.state.completionActive) return;
+        if(typeof inst.showHint === 'function' && CodeMirror.hint && CodeMirror.hint.anyword)
+          inst.showHint({ hint: CodeMirror.hint.anyword, completeSingle: false });
+      });
+    });
+  });
+}
+
+/* Resaltado de código en modo lectura (si runmode existe) */
+function highlightCodeViews(){
+  if(!HAS_CM || typeof CodeMirror.runMode !== 'function') return;
+  $$('#content .codeview[data-lang]').forEach(pre => {
+    if(pre.dataset.done || !pre.dataset.lang) return;
+    loadMode(pre.dataset.lang, () => {
+      try{ CodeMirror.runMode(pre.textContent, cmModeOf(pre.dataset.lang), pre); }catch(_){ }
+      pre.dataset.done = '1';
+    });
+  });
+}
+
+function renderSkeleton(){
+  $('#hero').innerHTML = `<div class="skel" style="height:120px"></div>`;
+  $('#content').innerHTML = `
+    <div class="skel" style="height:280px;margin-top:22px"></div>
+    <div class="skel" style="height:280px;margin-top:22px"></div>`;
+}
+
+/* ─────────── Guardar fila (lee textareas y CodeMirror) ─────────── */
+async function saveRowFromTr(tr){
+  if(!tr) return;
+  const tid = tr.closest('.tblock')?.dataset.table;
+  const t = getTable(tid); if(!t) return;
+  const rid = tr.dataset.rid;
+  const row = t.rows.find(x => x.id === rid); if(!row) return;
+  const values = t.headers.map((h,j) => {
+    const td = tr.querySelector(`td[data-td="${j}"]`);
+    if(!td) return row.values[j] ?? '';
+    if(h.type === 'code' && HAS_CM){
+      const cm = td.querySelector('.CodeMirror')?.CodeMirror;
+      if(cm) return cm.getValue();
+    }
+    return td.querySelector('textarea')?.value ?? '';
+  });
+  if(!values[0].trim()){
+    toast('La primera celda (nombre) no puede quedar vacía', 'warn');
+    return;
+  }
+  await mutate('row.update', { tableId: tid, rowId: rid, values, locked: true },
+    { apply(){ row.values = values; row.locked = true; }, msg: 'Fila guardada' });
+}
+
+/* ─────────── Edición en línea: título / teoría ─────────── */
+function startTitleEdit(tid, host){
+  const t = getTable(tid); if(!t || host.querySelector('input')) return;
+  const cur = t.titulo;
+  host.innerHTML = '';
+  const input = document.createElement('input');
+  input.className = 'inline-input'; input.value = cur; input.maxLength = 90;
+  host.appendChild(input);
+  host.insertAdjacentHTML('beforeend','<span class="edit-hint">Enter para guardar · Esc para cancelar</span>');
+  input.focus(); input.select();
+  let done = false;
+  const commit = () => {
+    if(done) return; done = true;
+    const v = input.value.trim();
+    if(!v || v === cur){ render(); return; }
+    mutate('table.meta', { tableId: tid, titulo: v },
+      { apply(){ t.titulo = v; }, msg: 'Título actualizado' });
+  };
+  input.addEventListener('keydown', e => {
+    if(e.key === 'Enter'){ e.preventDefault(); input.blur(); }
+    if(e.key === 'Escape'){ done = true; render(); }
+  });
+  input.addEventListener('blur', commit);
+}
+
+function startTextoEdit(tid, host){
+  const t = getTable(tid); if(!t || host.querySelector('textarea')) return;
+  const cur = t.texto || '';
+  host.innerHTML = '';
+  const ta = document.createElement('textarea');
+  ta.className = 'inline-input'; ta.value = cur; ta.placeholder = 'Teoría, contexto o notas… (multilínea)';
+  host.appendChild(ta);
+  host.insertAdjacentHTML('beforeend','<span class="edit-hint">Ctrl+Enter para guardar · Esc para cancelar</span>');
+  ta.focus();
+  let done = false;
+  const commit = () => {
+    if(done) return; done = true;
+    const v = ta.value.trim();
+    if(v === cur){ render(); return; }
+    mutate('table.meta', { tableId: tid, texto: v },
+      { apply(){ t.texto = v; }, msg: 'Descripción actualizada' });
+  };
+  ta.addEventListener('keydown', e => {
+    if(e.key === 'Escape'){ done = true; render(); }
+    if(e.key === 'Enter' && (e.ctrlKey || e.metaKey)){ e.preventDefault(); ta.blur(); }
+  });
+  ta.addEventListener('blur', commit);
+}
+
+/* ─────────── Diálogo de columna (nombre + tipo + lenguaje) ─────────── */
+const dlgCol = $('#dlg-col');
+let colEdit = null;
+function openColDialog(tid, j){
+  const t = getTable(tid); if(!t) return;
+  const h = t.headers[j];
+  if(!h) return;
+  colEdit = { tid, j };
+  $('#c-name').value = h.name;
+  $('#c-type').value = h.type || 'text';
+  $('#c-lang').value = h.lang || '';
+  $('#c-lang-field').hidden = $('#c-type').value !== 'code';
+  $('#c-hint').hidden = $('#c-type').value !== 'code';
+  dlgCol.showModal();
+  setTimeout(() => $('#c-name').select(), 50);
+}
+ $('#c-type').addEventListener('change', () => {
+  const code = $('#c-type').value === 'code';
+  $('#c-lang-field').hidden = !code;
+  $('#c-hint').hidden = !code;
+});
+ $('#col-save').onclick = () => {
+  if(!colEdit) return;
+  const t = getTable(colEdit.tid); if(!t) return;
+  const name = $('#c-name').value.trim();
+  if(!name){ toast('La cabecera necesita un nombre', 'warn'); return; }
+  const type = $('#c-type').value;
+  let lang = $('#c-lang').value.trim();
+  if(type === 'code'){
+    if(!lang){ toast('Elige el lenguaje del código', 'warn'); return; }
+    if(HAS_CM && CodeMirror.findModeByName && !CodeMirror.findModeByName(lang)){
+      toast('Lenguaje no reconocido — elige uno de la lista', 'warn'); return;
+    }
+  }else{
+    lang = '';
+  }
+  const nh = t.headers.map((h,i) => i === colEdit.j ? { name, type, lang } : h);
+  const tid = colEdit.tid;
+  mutate('table.meta', { tableId: tid, headers: nh },
+    { apply(){ t.headers = nh; }, msg: 'Columna actualizada' });
+  dlgCol.close(); colEdit = null;
+};
+
+/* ─────────── Diálogo: crear tabla ─────────── */
+const dlgTable = $('#dlg-table');
+const fRows = $('#f-rows'), fCols = $('#f-cols'), hGrid = $('#h-grid');
+
+function rebuildHeaderInputs(){
+  const n = Math.max(1, Math.min(12, parseInt(fCols.value) || 1));
+  fCols.value = n;
+  const old = [...hGrid.querySelectorAll('.h-input')].map(i => i.value);
+  hGrid.innerHTML = '';
+  for(let i = 0; i < n; i++){
+    const inp = document.createElement('input');
+    inp.className = 'h-input';
+    inp.placeholder = 'Cabecera ' + (i + 1);
+    inp.maxLength = 60;
+    inp.value = old[i] ?? (i === 0 ? 'Nombre' : '');
+    hGrid.appendChild(inp);
+  }
+}
+fCols.addEventListener('input', rebuildHeaderInputs);
+
+function openTableDialog(){
+  $('#f-titulo').value = '';
+  $('#f-texto').value = '';
+  fRows.value = 3; fCols.value = 3;
+  rebuildHeaderInputs();
+  dlgTable.showModal();
+  setTimeout(() => $('#f-titulo').focus(), 60);
+}
+ $('#btn-new-table').onclick = openTableDialog;
+
+ $('#form-table').addEventListener('submit', async e => {
+  e.preventDefault();
+  const titulo = $('#f-titulo').value.trim();
+  if(!titulo){ toast('Ponle un título a la tabla', 'warn'); return; }
+  const texto  = $('#f-texto').value.trim();
+  const headers = [...hGrid.querySelectorAll('.h-input')]
+    .map((i,idx) => ({ name: i.value.trim() || ('Columna ' + (idx + 1)), type: 'text', lang: '' }));
+  const nr = Math.max(0, Math.min(50, parseInt(fRows.value) || 0));
+  const rows = Array.from({ length: nr }, () => Array(headers.length).fill(''));
+  const tmp = 'tmp_' + Date.now().toString(36);
+  let createdId = null;
+  const ok = await mutate('table.create', { titulo, texto, headers, rows }, {
+    apply(){
+      state.tables.push({
+        tableId: tmp, titulo, texto, headers,
+        rows: rows.map(v => ({ id: 'tmpr' + Math.random().toString(36).slice(2), values: v, locked: false }))
+      });
+    },
+    onOk: async r => { createdId = r.tableId; await refreshTheme(); },
+    msg: 'Tabla creada'
+  });
+  if(ok){
+    dlgTable.close();
+    if(createdId) setTimeout(() => {
+      document.querySelector(`[data-table="${CSS.escape(createdId)}"]`)
+        ?.scrollIntoView({ behavior:'smooth', block:'start' });
+    }, 80);
+  }
+});
+
+/* ─────────── Confirmación ─────────── */
+function confirmDialog(title, body, okLabel = 'Eliminar'){
+  return new Promise(res => {
+    $('#c-title2').textContent = title;
+    $('#c-body').textContent  = body;
+    $('#c-ok').textContent    = okLabel;
+    const d = $('#dlg-confirm');
+    const ok = $('#c-ok'), cancel = $('#c-cancel');
+    const done = v => { d.close(); ok.onclick = cancel.onclick = d.onclose = null; res(v); };
+    ok.onclick     = () => done(true);
+    cancel.onclick = () => done(false);
+    d.onclose      = () => done(false);
+    d.showModal();
+  });
+}
+
+/* ─────────── Toasts ─────────── */
+function toast(msg, tone = 'ok'){
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.style.setProperty('--dot',
+    tone === 'err' ? '#e0705a' : tone === 'warn' ? '#d9a441' : 'var(--accent)');
+  t.textContent = msg;
+  $('#toasts').appendChild(t);
+  setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 320); }, 3400);
+}
+
+/* ─────────── Interacción: clics ─────────── */
+let gripDrag = false;   /* evita que arrastrar el ancho abra el diálogo */
+
+ $('#content').addEventListener('click', async e => {
+  const actEl = e.target.closest('[data-act]');
+  if(actEl){
+    const block = actEl.closest('.tblock');
+    const tid = block?.dataset.table;
+    const t = getTable(tid);
+    const act = actEl.dataset.act;
+
+    if(act === 'add-row' && t){
+      mutate('row.add',
+        { tableId: tid, values: Array(t.headers.length).fill('') },
+        { apply(){ t.rows.push({ id:'tmpR'+Date.now().toString(36), values: Array(t.headers.length).fill(''), locked:false }); },
+          onOk: async () => { await refreshTheme(); },
+          msg: 'Fila añadida' });
+    }
+    else if(act === 'add-col' && t){
+      mutate('col.add',
+        { tableId: tid, header: 'Nueva columna', at: t.headers.length },
+        { apply(){
+            t.headers.push({ name:'Nueva columna', type:'text', lang:'' });
+            t.rows.forEach(r => r.values.push(''));
+            delete widths[tid]; saveWidths();
+          },
+          msg: 'Columna añadida' });
+    }
+    else if(act === 'save-row' && t){
+      saveRowFromTr(actEl.closest('tr'));
+    }
+    else if(act === 'edit-row' && t){
+      const row = t.rows.find(x => x.id === actEl.dataset.rid); if(!row) return;
+      mutate('row.update', { tableId: tid, rowId: row.id, locked: false },
+        { apply(){ row.locked = false; }, msg: 'Fila en edición' });
+    }
+    else if(act === 'del-row' && t){
+      const row = t.rows.find(x => x.id === actEl.dataset.rid); if(!row) return;
+      const ok = await confirmDialog('Eliminar fila',
+        `Se eliminará «${String(row.values[0] || '').split('\n')[0] || '(sin nombre)'}» de esta tabla.`);
+      if(!ok) return;
+      mutate('row.delete', { tableId: tid, rowId: row.id },
+        { apply(){ t.rows = t.rows.filter(x => x.id !== row.id); }, msg: 'Fila eliminada' });
+    }
+    else if(act === 'del-col' && t){
+      const j = Number(actEl.dataset.col);
+      if(j < 1){ toast('La primera columna no se puede eliminar', 'warn'); return; }
+      const ok = await confirmDialog('Eliminar columna',
+        `Se eliminará «${t.headers[j].name}» y su contenido en todas las filas.`);
+      if(!ok) return;
+      mutate('col.delete', { tableId: tid, index: j },
+        { apply(){
+            t.headers.splice(j,1);
+            t.rows.forEach(r => r.values.splice(j,1));
+            delete widths[tid]; saveWidths();
+          },
+          msg: 'Columna eliminada' });
+    }
+    else if(act === 'del-table' && t){
+      const ok = await confirmDialog('Eliminar tabla',
+        `Se eliminará «${t.titulo}» con sus ${t.rows.length} filas. Esta acción no se puede deshacer.`);
+      if(!ok) return;
+      mutate('table.delete', { tableId: tid },
+        { apply(){
+            state.tables = state.tables.filter(x => x.tableId !== tid);
+            delete widths[tid]; saveWidths();
+          },
+          msg: 'Tabla eliminada' });
+    }
+    return;
+  }
+
+  /* FIX: clic directo sobre el th abre el diálogo de columna.
+     (Antes se escuchaba .h-label, que tiene pointer-events:none y
+     nunca recibía el clic — el diálogo no se abría jamás.) */
+  const th = e.target.closest('thead th');
+  if(th && !th.classList.contains('ops') && !gripDrag &&
+     !e.target.closest('.col-x') && !e.target.closest('.col-grip')){
+    const block = th.closest('.tblock');
+    openColDialog(block.dataset.table, Number(th.dataset.col));
+    return;
+  }
+
+  const tt = e.target.closest('.t-title');
+  if(tt){ startTitleEdit(tt.dataset.tid, tt); return; }
+  const tx = e.target.closest('.t-theory');
+  if(tx){ startTextoEdit(tx.dataset.tid, tx); return; }
+});
+
+/* ─────────── Interacción: teclado y auto-altura ─────────── */
+ $('#content').addEventListener('keydown', e => {
+  const el = e.target;
+  if(el.classList?.contains('cell-input')){
+    if((e.ctrlKey || e.metaKey) && e.key === 'Enter'){
+      e.preventDefault(); saveRowFromTr(el.closest('tr'));
+    }else if(e.key === 'Escape'){
+      render();
+    }
+  }
+});
+ $('#content').addEventListener('input', e => {
+  if(e.target.classList?.contains('cell-input')) autoGrow(e.target);
+});
+
+/* ─────────── Anchos de columna: arrastrar para ajustar ─────────── */
+ $('#content').addEventListener('pointerdown', e => {
+  const grip = e.target.closest('.col-grip');
+  if(!grip || e.button !== 0) return;
+  e.preventDefault();
+  gripDrag = true;
+  const th    = grip.closest('th');
+  const table = grip.closest('table');
+  const tid   = grip.closest('.tblock').dataset.table;
+  const j     = Number(th.dataset.col);
+  const col   = table.querySelectorAll('colgroup col')[j];
+  const startX = e.clientX;
+  const startW = th.getBoundingClientRect().width;
+  const clamp = w => Math.max(60, Math.min(1200, Math.round(w)));
+  const move = ev => { if(col) col.style.width = clamp(startW + ev.clientX - startX) + 'px'; };
+  const up = ev => {
+    window.removeEventListener('pointermove', move);
+    window.removeEventListener('pointerup', up);
+    const w = clamp(startW + ev.clientX - startX);
+    (widths[tid] = widths[tid] || {})[j] = w;
+    saveWidths();
+    setTimeout(() => { gripDrag = false; }, 0);
+  };
+  window.addEventListener('pointermove', move);
+  window.addEventListener('pointerup', up);
+});
+ $('#content').addEventListener('dblclick', e => {
+  const grip = e.target.closest('.col-grip');
+  if(!grip) return;
+  const tid = grip.closest('.tblock').dataset.table;
+  const j   = Number(grip.closest('th').dataset.col);
+  if(widths[tid]){ delete widths[tid][j]; saveWidths(); }
+  render();
+});
+
+ $('#q').addEventListener('input', e => { ui.q = e.target.value; renderTables(); });
+
+ $('#btn-mode').onclick = () => {
+  const next = isDark() ? 'light' : 'dark';
+  document.documentElement.dataset.theme = next;
+  localStorage.setItem('ai_theme', next);
+  render();   /* re-pinta codeviews/editores con el tema correcto */
+};
+ $$('[data-close]').forEach(b => b.onclick = () => $('#' + b.dataset.close).close());
+
+/* ─────────── Datos de demostración (solo si se borra API_URL) ─────────── */
+const DEMO_TABLES = [
+  { tableId:'t1', titulo:'Funciones integradas',
+    texto:'Ejemplo con columna de código: haz clic en la cabecera «Código» para ver/editar su tipo y lenguaje.\nLas celdas admiten varias líneas: Enter salta, Ctrl+Enter guarda.',
+    headers:[
+      { name:'Nombre', type:'text', lang:'' },
+      { name:'Código', type:'code', lang:'Python' },
+      { name:'Notas',  type:'text', lang:'' }
+    ],
+    rows:[
+      { id:'r1', values:['saludo','def saludar(nombre):\n    """Devuelve un saludo."""\n    return f"Hola, {nombre}!"','Función básica'], locked:true },
+      { id:'r2', values:['fibonacci','def fib(n):\n    a, b = 0, 1\n    for _ in range(n):\n        a, b = b, a + b\n    return a','Iterativo, O(n)'], locked:false },
+      { id:'r3', values:['filtrar','pares = [x for x in nums if x % 2 == 0]','List comprehension'], locked:true }
+    ]},
+  { tableId:'t2', titulo:'Atajos de teclado', texto:'',
+    headers:[{ name:'Atajo', type:'text', lang:'' }, { name:'Acción', type:'text', lang:'' }],
+    rows:[
+      { id:'r4', values:['Ctrl+Enter','Guardar la fila en edición'], locked:true },
+      { id:'r5', values:['Ctrl+Espacio','Autocompletado en celdas de código'], locked:false }
+    ]}
+];
+
+/* ─────────── Pantallas de error ─────────── */
+function screenError(title, bodyHtml){
+  loading = false;
+  $('#hero').innerHTML = '';
+  $('#content').innerHTML = `
+    <div class="empty-tables" style="border-style:solid">
+      <h1 style="font-family:'Fraunces',serif;font-size:24px;color:var(--ink)">${esc(title)}</h1>
+      ${bodyHtml}
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
+        <button class="btn primary" onclick="location.reload()">Reintentar</button>
+        <a class="btn" href="../index.html">Volver al índice</a>
+      </div>
+    </div>`;
+}
+
+/* ─────────── Arranque ─────────── */
+(async function init(){
+  renderSkeleton();
+  HAS_CM = await cmReady;   /* true/false — nunca lanza */
+  populateLangList();
+  if(demoMode){
+    state = {
+      module: { id:'demo', nombre: THEME_TITLE || prettyName(SHEET_NAME), color:'#a34a1d',
+                categoria:'demo', icono:'', descripcion:'Modo demostración — conecta API_URL para cargar tus datos reales.' },
+      tables: DEMO_TABLES
+    };
+    loading = false; render();
+    return;
+  }
+  try{
+    await loadTheme();
+  }catch(err){
+    const msg = String(err.message || '');
+    if(/Ningún tema del Index usa la hoja/i.test(msg) || /No existe la hoja/i.test(msg)){
+      screenError('Hoja no encontrada', `
+        <p>La hoja <span class="file-path">${esc(SHEET_NAME)}</span> no corresponde a ningún tema.</p>
+        <p>Crea el tema desde el índice (su hoja se genera sola con el nombre
+        <span class="file-path">${esc(SHEET_NAME)}</span>), o revisa
+        <span class="file-path">SHEET_NAME</span> en este archivo.</p>`);
+      return;
+    }
+    screenError('No se pudo cargar el tema', `<p>${esc(msg || 'Error de red')}</p>`);
+    return;
+  }
+  loading = false; render();
+  setInterval(syncTick, 30 * 60 * 1000);
+})();
+</script>
+</body>
+</html>
