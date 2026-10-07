@@ -1,12 +1,11 @@
 <!DOCTYPE html>
 <!-- ═══════════════════════════════════════════════════════════════════
-     PLANTILLA DE TEMA — APRENDIZAJE INFINITO (v4)
-     v4: botones Fila/Columna ARRIBA · añadir/editar/crear instantáneo
-     (el POST va en segundo plano, NUNCA borra lo que escribes) ·
-     sync periódico eliminado · overlay de carga con icono y bloqueo ·
-     red de seguridad que conserva lo tecleado ante cualquier render.
-     REQUIERE backend v5 (row.add acepta rowId del cliente).
-     AL DUPLICAR: cambia SOLO SHEET_NAME abajo. ══════════════════════ -->
+     PLANTILLA DE TEMA — APRENDIZAJE INFINITO (v5)
+     v5: móvil completo (columnas proporcionales, sin recortes) +
+     sticky nombre/acciones + sombras de scroll + parches "Guardando…"
+     (timeout de red 30 s, badge con autolimpieza, conteo de ops) +
+     CodeMirror sincronizado a su textarea (nada se pierde).
+     Requiere backend v5. AL DUPLICAR: cambia SOLO SHEET_NAME. ══════ -->
 <html lang="es" data-theme="dark">
 <head>
 <meta charset="UTF-8">
@@ -63,7 +62,7 @@ main{flex:1;padding-block:8px 46px}
 }
 @keyframes bootdraw{to{stroke-dashoffset:-920}}
 
-/* ═══════════ Badge "Guardando…" (no bloqueante) ═══════════ */
+/* ═══════════ Badge "Guardando…" (no bloqueante, con autolimpieza) ═══════════ */
 #saving{
   position:fixed;right:16px;bottom:16px;z-index:150;
   display:flex;align-items:center;gap:8px;
@@ -149,7 +148,15 @@ main{flex:1;padding-block:8px 46px}
 .tb-tools{display:flex;align-items:center;gap:8px;margin-top:14px;flex-wrap:wrap}
 .tb-tools .tb-stats{margin-left:auto}
 
-.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin-top:8px;background:var(--surface)}
+/* ═══════════ Tabla ═══════════ */
+.tbl-wrap{
+  overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin-top:8px;background:var(--surface);
+  overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;
+}
+/* Sombras de scroll: indican si queda contenido a un lado u otro */
+.tbl-wrap.sc-left{box-shadow:inset 14px 0 12px -12px rgba(0,0,0,.30)}
+.tbl-wrap.sc-right{box-shadow:inset -14px 0 12px -12px rgba(0,0,0,.30)}
+.tbl-wrap.sc-left.sc-right{box-shadow:inset 14px 0 12px -12px rgba(0,0,0,.30),inset -14px 0 12px -12px rgba(0,0,0,.30)}
 table{border-collapse:collapse;width:100%;min-width:560px;table-layout:fixed}
 thead th{
   position:relative;background:var(--surface2);font-weight:600;font-size:11.5px;
@@ -166,7 +173,8 @@ tbody tr:not(.editing):hover td{background:var(--row-hover)}
 tbody tr.editing td{background:var(--editing)}
 td{vertical-align:top;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word}
 td.ops,th.ops{position:sticky;right:0;text-align:right;white-space:nowrap;width:76px;min-width:76px;padding:9px 8px}
-td.ops{border-left:1px solid var(--line)}
+th.ops{z-index:3}
+td.ops{border-left:1px solid var(--line);z-index:2}
 .h-label{pointer-events:none}
 .col-x{
   position:absolute;right:20px;top:50%;transform:translateY(-50%);
@@ -205,6 +213,15 @@ th:hover .col-grip::after{background:var(--line)}
 }
 .mini-btn:hover{color:var(--ink);border-color:var(--muted)}
 .mini-btn svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round}
+
+/* Columna del nombre FIJA al hacer scroll horizontal (nombre y acciones
+   siempre visibles). Colocadas al final para ganar los empates de CSS. */
+thead th:first-child{position:sticky;left:0;z-index:3;background:var(--surface2)}
+tbody td:first-child{position:sticky;left:0;z-index:2}
+tbody tr:not(.editing) td:first-child{background:var(--surface)}
+tbody tr:not(.editing):hover td:first-child{background:var(--row-hover)}
+tbody tr.editing td:first-child{background:var(--editing)}
+thead th:first-child,tbody td:first-child{box-shadow:2px 0 0 var(--line)}
 
 /* ═══════════ Celdas: multilínea y código ═══════════ */
 .cell-input{
@@ -296,11 +313,32 @@ input:focus,textarea:focus,select:focus{border-color:var(--accent)}
 }
 .foot em{font-family:'Fraunces',serif}
 
+/* ═══════════ MÓVIL: tablas completas, sin recortes ═══════════
+   <720 px: se ignoran los anchos guardados del escritorio y el
+   colgroup pasa a porcentajes (nombre más ancho) + ops compacta.
+   Todo el contenido cabe en pantalla; las celdas crecen en alto. */
+@media (max-width:720px){
+  table{min-width:0}
+  th,td{padding:8px 9px;font-size:13px}
+  thead th{padding:9px 24px 9px 9px;font-size:10.5px}
+  td.ops,th.ops{width:52px;min-width:52px;padding:6px 3px}
+  td.ops{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:2px}
+  .tbl-wrap col.opscol{width:52px!important}
+  .op{width:24px;height:24px}
+  .op svg{width:12px;height:12px}
+  .col-grip{display:none}
+  .cell-input,.codeview{font-size:12px}
+  .CodeMirror{font-size:12px}
+  .tb-tools{gap:6px;margin-top:12px}
+  .mini-btn{padding:5px 10px;font-size:12px}
+  .tblock{padding:16px 12px 12px}
+  .hero-theme{padding:20px 0 16px}
+}
+
 @media (max-width:560px){
   .btn.primary span{display:none}
   .btn.primary{padding:8px 11px}
   .brand-name span{display:none}
-  .tblock{padding:16px 13px 11px}
   .tb-stats{display:none}
 }
 </style>
@@ -469,8 +507,9 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g,
   c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const pad = n => String(n).padStart(2,'0');
 const isDark = () => document.documentElement.dataset.theme === 'dark';
+const isMobile = () => window.innerWidth < 720;
 /* Ids de fila generados EN EL CLIENTE → el backend v5 los respeta:
-   así añadir filas nunca requiere re-sincronizar ni re-renderizar. */
+   añadir filas nunca requiere re-sincronizar ni re-renderizar. */
 const newRowId = () => 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 
 const ACC = {'á':'a','à':'a','ä':'a','â':'a','ã':'a','é':'e','è':'e','ë':'e','ê':'e',
@@ -619,13 +658,21 @@ function normalizeTables(tables){
   return tables;
 }
 
+/* ═══════════ Red con TIMEOUT: ninguna petición queda colgada ═══════════ */
+const FETCH_TIMEOUT = 30000;
+function fetchWithTimeout(url, opts, ms = FETCH_TIMEOUT){
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
+  return fetch(url, Object.assign({}, opts, { signal: ctrl.signal }))
+    .finally(() => clearTimeout(t));
+}
 async function apiGet(params){
-  const r = await fetch(`${API_URL}?${params}`);
+  const r = await fetchWithTimeout(`${API_URL}?${params}`);
   if(!r.ok) throw new Error('HTTP ' + r.status);
   return r.json();
 }
 async function apiPost(action, payload){
-  const r = await fetch(API_URL, {
+  const r = await fetchWithTimeout(API_URL, {
     method: 'POST',
     headers: {'Content-Type':'text/plain;charset=utf-8'},
     body: JSON.stringify(Object.assign({ action }, payload))
@@ -642,11 +689,44 @@ async function fetchTheme(){
   persistCache();
 }
 
-/* Badge "Guardando…" — solo informativo, NUNCA bloquea la edición */
-let savingCount = 0;
-function setSaving(on){
-  savingCount = Math.max(0, savingCount + (on ? 1 : -1));
-  $('#saving').hidden = savingCount === 0;
+/* ═══════════ Badge "Guardando…" con autolimpieza garantizada ═══════════
+   Cada operación se registra con su propio watchdog: pase lo que pase
+   (respuesta, error o red colgada), el badge se apaga solo. */
+const pendingOps = new Map();
+let opSeq = 0;
+const BADGE_DELAY = 350;    /* no parpadear en operaciones rápidas */
+const BADGE_MAX   = 45000;  /* autolimpieza máxima de seguridad */
+
+function refreshSavingBadge(){
+  const el = document.getElementById('saving');
+  if(!el) return;
+  const n = pendingOps.size;
+  el.hidden = n === 0;
+  if(n > 0){
+    const label = el.querySelector('span');
+    if(label) label.textContent = n > 1 ? `Guardando… (${n})` : 'Guardando…';
+  }
+}
+function opStart(){
+  const id = ++opSeq;
+  const info = { showT: null, maxT: null };
+  info.showT = setTimeout(refreshSavingBadge, BADGE_DELAY);
+  info.maxT  = setTimeout(() => opEnd(id), BADGE_MAX);
+  pendingOps.set(id, info);
+  return id;
+}
+function opEnd(id){
+  const info = pendingOps.get(id);
+  if(!info) return;
+  clearTimeout(info.showT);
+  clearTimeout(info.maxT);
+  pendingOps.delete(id);
+  refreshSavingBadge();
+}
+function abortMsg(err){
+  return err && err.name === 'AbortError'
+    ? 'tiempo de espera agotado (el cambio pudo guardarse; recarga para verificar)'
+    : (err && err.message) || 'error de red';
 }
 
 /* Overlay de carga: se oculta en el primer render */
@@ -657,32 +737,32 @@ function hideBoot(){
   if(b){ b.classList.add('off'); setTimeout(() => b.remove(), 350); }
 }
 
-/* ─────────── Mutaciones: aplicar local → render → POST en background.
-   SIN re-render posterior y SIN revertir: lo que escribes jamás se
-   borra. Si el POST falla, solo se avisa con toast. ─────────── */
+/* ═══════════ Mutaciones: local → render → POST en background.
+   SIN re-render posterior y SIN revertir: lo que escribes jamás
+   se borra. Si el POST falla, solo se avisa con toast. ═══════════ */
 async function mutate(action, payload, { apply=null, onOk=null, msg='Guardado' } = {}){
   if(apply) apply();
   render();
   if(demoMode){ toast('Modo demostración: el cambio no se guarda', 'warn'); return true; }
-  setSaving(true);
+  const op = opStart();
   try{
     const r = await apiPost(action, Object.assign({ sheet: SHEET_NAME }, payload));
     if(!r.ok) throw new Error(r.error || 'Error del servidor');
     cacheRev = String(r.rev);
     persistCache();
     if(onOk){ try{ onOk(r); }catch(_){ } }
-    setSaving(false);
+    opEnd(op);
     if(msg) toast(msg, 'ok');
     maybePendingSync();
     return true;
   }catch(err){
-    setSaving(false);
-    toast('No se pudo guardar: ' + (err.message || 'error de red'), 'err');
+    opEnd(op);
+    toast('No se pudo guardar: ' + abortMsg(err), 'err');
     return false;
   }
 }
 
-/* Añadir fila: instantáneo + POST en background (id generado aquí) */
+/* Añadir fila: instantáneo + POST en background (id del cliente) */
 function addRow(tid){
   const t = getTable(tid); if(!t) return;
   const rid = newRowId();
@@ -693,24 +773,25 @@ function addRow(tid){
     const tr = document.querySelector(`#content tr[data-rid="${CSS.escape(rid)}"]`);
     const inp = tr && tr.querySelector('textarea.cell-input');
     if(inp){ inp.focus(); inp.scrollIntoView({ block:'nearest' }); }
+    updateScrollHints();
   });
   if(demoMode) return;
-  setSaving(true);
+  const op = opStart();
   apiPost('row.add', { sheet: SHEET_NAME, tableId: tid, rowId: rid, values: row.values })
     .then(r => {
       if(!r.ok) throw new Error(r.error || 'Error del servidor');
       cacheRev = String(r.rev); persistCache();
-      setSaving(false); toast('Fila añadida', 'ok'); maybePendingSync();
+      opEnd(op); toast('Fila añadida', 'ok'); maybePendingSync();
     })
     .catch(err => {
-      setSaving(false);
-      toast('La fila no se pudo crear en la hoja: ' + (err.message || 'red'), 'err');
+      opEnd(op);
+      toast('La fila no se pudo crear en la hoja: ' + abortMsg(err), 'err');
     });
 }
 
-/* ─────────── Sincronización: SOLO una comprobación tras abrir.
-   Si estás escribiendo se pospone y se reintentará después de tu
-   próximo guardado. NO hay intervalos periódicos. ─────────── */
+/* ═══════════ Sincronización: SOLO una comprobación tras abrir.
+   Si estás escribiendo se pospone hasta tu próximo guardado.
+   NO hay intervalos periódicos. ═══════════ */
 let pendingSync = false;
 function isEditing(){
   const ae = document.activeElement;
@@ -727,9 +808,9 @@ async function backgroundCheck(){
   try{
     const r = await apiGet('action=rev');
     if(String(r.rev) === String(cacheRev)){ persistCache(); return; }
-    if(isEditing() || savingCount > 0){ pendingSync = true; return; }   // nunca interrumpir
+    if(isEditing() || pendingOps.size > 0){ pendingSync = true; return; }
     const all = await apiGet('action=theme&sheet=' + encodeURIComponent(SHEET_NAME));
-    if(all.ok && !isEditing() && savingCount === 0){
+    if(all.ok && !isEditing() && pendingOps.size === 0){
       state = { module: all.module || null, tables: normalizeTables(all.tables || []) };
       cacheRev = String(all.rev);
       persistCache(); render();
@@ -757,7 +838,7 @@ function captureEdits(){
     if(tr && td) cap.focus = { rid: tr.dataset.rid, cell: td.dataset.td };
   }
   $$('#content tr.editing').forEach(tr => {
-    if(skipRestore.has(tr.dataset.rid)) return;    // Esc = descartar a propósito
+    if(skipRestore.has(tr.dataset.rid)) return;
     cap.rows[tr.dataset.rid] = [...tr.querySelectorAll('textarea')].map(t => t.value);
   });
   skipRestore.clear();
@@ -786,7 +867,7 @@ function restoreEdits(cap){
 
 /* ─────────── Render ─────────── */
 function render(){
-  if(loading) return;                    // el overlay #boot sigue tapando
+  if(loading) return;                    /* el overlay #boot sigue tapando */
   const cap = captureEdits();
   renderHero();
   renderTables();
@@ -794,6 +875,7 @@ function render(){
   mountEditors();
   highlightCodeViews();
   hideBoot();
+  requestAnimationFrame(updateScrollHints);
 }
 
 function renderHero(){
@@ -850,10 +932,24 @@ function renderTables(){
   C.innerHTML = list.map((t,i) => blockHTML(t,i)).join('');
 }
 
-function blockHTML(t, i){
+/* colgroup: escritorio respeta anchos guardados (px);
+   móvil usa proporciones (nombre ancho) → todo cabe en pantalla */
+function colsHTML(t){
+  if(isMobile()){
+    const n = t.headers.length;
+    const OPS = 52;
+    const first = n === 1 ? 1 : 0.34;
+    const rest  = n > 1 ? ((1 - first) / (n - 1)) : 0;
+    return t.headers.map((h,j) =>
+      `<col style="width:calc((100% - ${OPS}px) * ${j === 0 ? first : rest})">`).join('')
+      + `<col class="opscol" style="width:${OPS}px">`;
+  }
   const w = widths[t.tableId] || {};
-  const cols = t.headers.map((h,j) =>
-    `<col${w[j] ? ` style="width:${w[j]}px"` : ''}>`).join('') + '<col style="width:76px">';
+  return t.headers.map((h,j) =>
+    `<col${w[j] ? ` style="width:${w[j]}px"` : ''}>`).join('') + '<col class="opscol" style="width:76px">';
+}
+
+function blockHTML(t, i){
   return `
   <section class="tblock" data-table="${esc(t.tableId)}">
     <div class="tb-head">
@@ -869,7 +965,7 @@ function blockHTML(t, i){
       ? `<p class="t-theory" data-tid="${esc(t.tableId)}" title="Clic para editar">${esc(t.texto)}</p>`
       : `<p class="t-theory empty" data-tid="${esc(t.tableId)}" title="Clic para añadir">+ Añadir teoría o descripción…</p>`}
     <div class="tb-tools">
-      <button class="mini-btn" data-act="add-row" title="Añadir fila arriba, editable al instante">
+      <button class="mini-btn" data-act="add-row" title="Añadir fila: nace editable al instante">
         <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Fila
       </button>
       <button class="mini-btn" data-act="add-col">
@@ -879,11 +975,11 @@ function blockHTML(t, i){
     </div>
     <div class="tbl-wrap">
       <table>
-        <colgroup>${cols}</colgroup>
+        <colgroup>${colsHTML(t)}</colgroup>
         <thead><tr>
           ${t.headers.map((h,j) => `
             <th data-col="${j}" class="${j === 0 ? 'lock' : ''}"
-                title="Clic: nombre, tipo y lenguaje · Borde derecho: arrastrar para ancho (doble clic restablece)">
+                title="${esc(h.name)} · Clic: editar cabecera (tipo/lenguaje)${j === 0 ? ' · Fija: ordena las filas' : ' · ×: eliminar columna'}">
               <span class="h-label">${esc(h.name)}</span>
               ${h.type === 'code' ? `<span class="col-badge" title="Columna de código: ${esc(h.lang || 'texto')}">‹› ${esc(h.lang || '')}</span>` : ''}
               ${j > 0 ? `<button class="col-x" data-act="del-col" data-col="${j}" title="Eliminar columna" aria-label="Eliminar columna">
@@ -966,12 +1062,14 @@ function mountEditors(){
           'Cmd-Enter':  cm2 => saveRowFromTr(cm2.getWrapperElement().closest('tr')),
           'Esc': cm2 => {
             const tr = cm2.getWrapperElement().closest('tr');
-            if(tr) skipRestore.add(tr.dataset.rid);   // Esc descarta
+            if(tr) skipRestore.add(tr.dataset.rid);
             render();
           }
         }
       });
       cm.setSize('100%', 'auto');
+      /* Sincroniza CM → textarea oculto: captureEdits nunca pierde código */
+      cm.on('change', () => { ta.value = cm.getValue(); });
       cm.on('inputRead', (inst, ch) => {
         if(!ch.text || !ch.text[0] || !/[\w$]/.test(ch.text[0])) return;
         if(inst.state.completionActive) return;
@@ -992,6 +1090,35 @@ function highlightCodeViews(){
     });
   });
 }
+
+/* ─────────── Sombras de scroll (¿queda contenido a los lados?) ─────────── */
+let hintRaf = false;
+function updateScrollHints(){
+  $$('#content .tbl-wrap').forEach(w => {
+    w.classList.toggle('sc-left',  w.scrollLeft > 4);
+    w.classList.toggle('sc-right', w.scrollLeft + w.clientWidth < w.scrollWidth - 4);
+  });
+}
+ $('#content').addEventListener('scroll', e => {
+  if(!e.target.classList?.contains('tbl-wrap')) return;
+  if(hintRaf) return;
+  hintRaf = true;
+  requestAnimationFrame(() => { hintRaf = false; updateScrollHints(); });
+}, true);
+
+/* Giro/redimensionado: re-render si cruza el breakpoint (nunca en edición) */
+let wasMobile = isMobile(), rzT = null;
+window.addEventListener('resize', () => {
+  updateScrollHints();
+  clearTimeout(rzT);
+  rzT = setTimeout(() => {
+    const m = isMobile();
+    if(m !== wasMobile && !isEditing() && pendingOps.size === 0){
+      wasMobile = m;
+      render();
+    }
+  }, 250);
+});
 
 /* ─────────── Guardar fila (POST en background, sin interrupciones) ─────────── */
 async function saveRowFromTr(tr){
@@ -1146,11 +1273,11 @@ function openTableDialog(){
   const headers = [...hGrid.querySelectorAll('.h-input')]
     .map((i,idx) => ({ name: i.value.trim() || ('Columna ' + (idx + 1)), type: 'text', lang: '' }));
   const nr = Math.max(0, Math.min(50, parseInt(fRows.value) || 0));
-  /* Filas con id del CLIENTE: el backend v5 los respeta → no hay
-     re-sincronización ni re-render al crear. Nacen editables. */
+  /* Filas con id del CLIENTE → nacen editables, sin re-sincronizar */
   const newRows = Array.from({ length: nr }, () =>
     ({ rowId: newRowId(), values: Array(headers.length).fill('') }));
   const tmp = 'tmp_' + Date.now().toString(36);
+  let realId = null;
   const ok = await mutate('table.create',
     { titulo, texto, headers, rows: newRows }, {
       apply(){
@@ -1159,19 +1286,17 @@ function openTableDialog(){
           rows: newRows.map(r => ({ id: r.rowId, values: r.values.slice(), locked: false }))
         });
       },
-      onOk(r){ remapTableId(tmp, r.tableId); },
+      onOk(r){ realId = r.tableId; remapTableId(tmp, realId); },
       msg: 'Tabla creada'
     });
   if(ok){
     dlgTable.close();
     setTimeout(() => {
-      const sec = document.querySelector(`#content .tblock[data-table="${CSS.escape(r2id(tmp))}"]`);
-      sec?.scrollIntoView({ behavior:'smooth', block:'start' });
+      document.querySelector(`#content .tblock[data-table="${CSS.escape(realId || tmp)}"]`)
+        ?.scrollIntoView({ behavior:'smooth', block:'start' });
     }, 80);
   }
 });
-/* helper: tras el remap el id real reemplaza al tmp en el DOM */
-function r2id(tmp){ return state.tables.find(t => t.tableId === tmp) ? tmp : tmp; }
 
 function remapTableId(oldId, newId){
   const t = state.tables.find(x => x.tableId === oldId);
@@ -1222,7 +1347,7 @@ let gripDrag = false;
     const act = actEl.dataset.act;
 
     if(act === 'add-row' && t){
-      addRow(tid);                                  // instantáneo, botón arriba
+      addRow(tid);
     }
     else if(act === 'add-col' && t){
       mutate('col.add',
@@ -1237,11 +1362,9 @@ let gripDrag = false;
     else if(act === 'save-row' && t){
       saveRowFromTr(actEl.closest('tr'));
     }
-    /* Editar = instantáneo y 100% local: sin POST, sin espera.
-       El bloqueo real se envía al guardar la fila. */
     else if(act === 'edit-row' && t){
       const row = t.rows.find(x => x.id === actEl.dataset.rid); if(!row) return;
-      row.locked = false;
+      row.locked = false;                       /* 100% local: sin POST */
       render();
       requestAnimationFrame(() => {
         const tr = document.querySelector(`#content tr[data-rid="${CSS.escape(row.id)}"]`);
@@ -1306,7 +1429,7 @@ let gripDrag = false;
       e.preventDefault(); saveRowFromTr(el.closest('tr'));
     }else if(e.key === 'Escape'){
       const tr = el.closest('tr');
-      if(tr) skipRestore.add(tr.dataset.rid);       // Esc descarta lo tecleado
+      if(tr) skipRestore.add(tr.dataset.rid);
       render();
     }
   }
@@ -1315,10 +1438,10 @@ let gripDrag = false;
   if(e.target.classList?.contains('cell-input')) autoGrow(e.target);
 });
 
-/* ─────────── Anchos de columna ─────────── */
+/* ─────────── Anchos de columna (solo escritorio) ─────────── */
  $('#content').addEventListener('pointerdown', e => {
   const grip = e.target.closest('.col-grip');
-  if(!grip || e.button !== 0) return;
+  if(!grip || e.button !== 0 || isMobile()) return;
   e.preventDefault();
   gripDrag = true;
   const th    = grip.closest('th');
@@ -1336,6 +1459,7 @@ let gripDrag = false;
     const w = clamp(startW + ev.clientX - startX);
     (widths[tid] = widths[tid] || {})[j] = w;
     saveWidths();
+    updateScrollHints();
     setTimeout(() => { gripDrag = false; }, 0);
   };
   window.addEventListener('pointermove', move);
@@ -1399,12 +1523,9 @@ function screenError(title, bodyHtml){
 }
 
 /* ─────────── Arranque ───────────
-   1. Con caché local: render INMEDIATO y verificación de fondo
-      (pospuesta si estás escribiendo).
-   2. Sin caché: el overlay de carga cubre todo hasta que lleguen
-      los datos — nada es editable hasta entonces.               */
+   Con caché: render inmediato + verificación de fondo (pospuesta si
+   escribes). Sin caché: el overlay #boot bloquea todo hasta cargar. */
 (async function init(){
-  renderSkeletonless();
   HAS_CM = await cmReady;
   populateLangList();
   if(demoMode){
@@ -1420,8 +1541,8 @@ function screenError(title, bodyHtml){
   if(cached && cached.data){
     state = cached.data; normalizeTables(state.tables);
     cacheRev = String(cached.rev ?? '');
-    loading = false; render();          // contenido al instante
-    backgroundCheck();                  // una sola verificación en fondo
+    loading = false; render();
+    backgroundCheck();
     return;
   }
   try{
@@ -1440,11 +1561,6 @@ function screenError(title, bodyHtml){
     screenError('No se pudo cargar el tema', `<p>${esc(msg || 'Error de red')}</p>`);
   }
 })();
-
-function renderSkeletonless(){
-  $('#hero').innerHTML = '';
-  $('#content').innerHTML = '';
-}
 </script>
 </body>
 </html>
