@@ -43,6 +43,16 @@ svg{display:block}
   font-size:11px;background:var(--surface2);padding:2px 7px;border-radius:6px;color:var(--ink);
 }
 
+/* Indicador discreto de sincronización en segundo plano */
+#syncing{
+  position:fixed;left:16px;bottom:16px;z-index:150;
+  display:flex;align-items:center;gap:8px;
+  background:var(--ink);color:var(--bg);font-size:12px;
+  padding:7px 13px;border-radius:12px;box-shadow:var(--shadow);
+}
+#syncing .mini-spin{width:13px;height:13px;animation:spin .9s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
 /* ═══════════ Cabecera ═══════════ */
 .top{
   position:sticky;top:0;z-index:40;
@@ -334,6 +344,12 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:9px}
   <code>API_URL</code> (al inicio del &lt;script&gt;) para conectar tu hoja.
 </div>
 
+<!-- Indicador discreto de verificación en segundo plano -->
+<div id="syncing" hidden>
+  <svg class="mini-spin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="40 18"/></svg>
+  <span>Actualizando…</span>
+</div>
+
 <main class="wrap" id="main">
   <div id="app">
     <div class="page-head" id="page-head">
@@ -539,13 +555,21 @@ function writeCache(modules, rev){
 }
 function persistCache(){ if(cacheRev != null) writeCache(state.modules, cacheRev); }
 
+/* ═══════════ Red con TIMEOUT: ninguna petición queda colgada ═══════════ */
+const FETCH_TIMEOUT = 30000;
+function fetchWithTimeout(url, opts, ms = FETCH_TIMEOUT){
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
+  return fetch(url, Object.assign({}, opts, { signal: ctrl.signal }))
+    .finally(() => clearTimeout(t));
+}
 async function apiGet(params){
-  const r = await fetch(`${API_URL}?${params}`);
+  const r = await fetchWithTimeout(`${API_URL}?${params}`);
   if(!r.ok) throw new Error('HTTP ' + r.status);
   return r.json();
 }
 async function apiPost(action, payload){
-  const r = await fetch(API_URL, {
+  const r = await fetchWithTimeout(API_URL, {
     method: 'POST',
     headers: {'Content-Type':'text/plain;charset=utf-8'}, // evita el preflight CORS
     body: JSON.stringify(Object.assign({ action }, payload))
@@ -553,38 +577,50 @@ async function apiPost(action, payload){
   if(!r.ok) throw new Error('HTTP ' + r.status);
   return r.json();
 }
-
-/* Carga inicial: caché primero; solo baja de la hoja si la revisión cambió */
-async function loadInitial(){
-  const cached = readCache();
-  if(cached && cached.data){
-    try{
-      const r = await apiGet('action=rev');
-      if(String(r.rev) === String(cached.rev)){
-        state = cached.data; cacheRev = cached.rev; return;
-      }
-    }catch(_){ /* sin conexión: usamos la copia local */
-      state = cached.data; cacheRev = cached.rev; return;
-    }
-  }
-  const r = await apiGet('action=all');
-  if(!r.ok) throw new Error(r.error || 'Error al leer la hoja');
-  state = { modules: r.modules }; cacheRev = String(r.rev); writeCache(r.modules, r.rev);
+function abortMsg(err){
+  return err && err.name === 'AbortError'
+    ? 'tiempo de espera agotado' : (err && err.message) || 'error de red';
 }
 
-/* Mantenimiento silencioso cada 30 min: compara revisión local contra la hoja */
-async function syncTick(){
-  if(demoMode || loading) return;
+/* ═══════════ Estrategia de carga (rápida) ═══════════
+   1. Si hay copia local → se pinta AL INSTANTE (cero red).
+   2. Verificación de fondo: si la revisión de la hoja cambió,
+      se descarga y re-pinta. SIN intervalos periódicos.       */
+function stateFromCache(){
+  const c = readCache();
+  if(c && c.data && Array.isArray(c.data.modules)){
+    state = c.data;
+    cacheRev = String(c.rev ?? '');
+    return true;
+  }
+  return false;
+}
+async function fetchAll(){
+  const r = await apiGet('action=all');
+  if(!r.ok) throw new Error(r.error || 'Error al leer la hoja');
+  state = { modules: r.modules || [] };
+  cacheRev = String(r.rev);
+  writeCache(state.modules, cacheRev);
+}
+
+let checking = false;
+function setSyncing(on){
+  const el = document.getElementById('syncing');
+  if(el) el.hidden = !on;
+}
+async function backgroundCheck(){
+  if(demoMode || checking) return;
+  checking = true; setSyncing(true);
   try{
     const r = await apiGet('action=rev');
-    if(String(r.rev) !== String(cacheRev)){
-      const all = await apiGet('action=all');
-      state = { modules: all.modules }; cacheRev = String(all.rev);
-      writeCache(all.modules, all.rev); render();
+    if(String(r.rev) === String(cacheRev)){
+      persistCache();                    // backup de respaldo
     }else{
-      persistCache(); // backup de respaldo
+      await fetchAll();
+      render();
     }
-  }catch(_){ /* offline: la copia local sigue siendo la fuente */ }
+  }catch(_){ /* offline: manda la copia local */ }
+  checking = false; setSyncing(false);
 }
 
 /* ─────────── Mutaciones con reversión si fallan ─────────── */
@@ -602,7 +638,7 @@ async function mutate(action, payload, { apply=null, onOk=null, msg='Guardado' }
     return true;
   }catch(err){
     state = JSON.parse(snap); render();
-    toast('No se pudo guardar: ' + (err.message || 'error de red'), 'err');
+    toast('No se pudo guardar: ' + abortMsg(err), 'err');
     return false;
   }
 }
@@ -672,8 +708,8 @@ function render(){
   for(const m of list){
     const cat = m.categoria || '';
     if(cat !== lastCat){
-      if(lastCat !== null) html += '</div></section>';   // cierra el grupo anterior
-      gi++; nRow = 0;                                    // ← contador por grupo (fix NaN)
+      if(lastCat !== null) html += '</div></section>';
+      gi++; nRow = 0;
       groupCount = list.filter(x => (x.categoria || '') === cat).length;
       html += `
         <section class="group">
@@ -709,7 +745,7 @@ function cardHTML(m){
   </article>`;
 }
 
-function rowHTML(m, n){   // ← n es el número dentro de su categoría (01, 02…)
+function rowHTML(m, n){
   return `
   <div class="row-item" data-href="${themeHref(m)}" tabindex="0" role="link"
        style="--c:${esc(m.color || PALETTE[0])}">
@@ -1001,7 +1037,9 @@ const DEMO_MODULES = [
     descripcion:'Vectores, matrices y transformaciones: el lenguaje de los datos.' }
 ];
 
-/* ─────────── Arranque ─────────── */
+/* ─────────── Arranque ───────────
+   Con caché: pinta AL INSTANTE y verifica la hoja en segundo plano.
+   Sin caché: skeleton breve + descarga (ahora rápida: solo el Index). */
 (async function init(){
   setView(ui.view);
   if(demoMode){
@@ -1010,20 +1048,26 @@ const DEMO_MODULES = [
     loading = false; render();
     return;
   }
+  const hadCache = stateFromCache();
+  if(hadCache){
+    loading = false;
+    render();                  // ← contenido visible de inmediato, cero espera
+    backgroundCheck();         // ← verifica si la hoja cambió, sin molestar
+    return;
+  }
   try{
-    await loadInitial();
+    await fetchAll();
   }catch(err){
     loading = false;
     $('#content').innerHTML = `
       <div class="hero" style="padding-top:6vh">
         <h1 style="font-size:26px">No se pudo conectar con la hoja</h1>
-        <p>${esc(err.message || 'Error de red')} — revisa que la URL de la Web App sea correcta y que el acceso sea público.</p>
+        <p>${esc(abortMsg(err))} — revisa que la URL de la Web App sea correcta y que el acceso sea público.</p>
         <button class="btn primary" onclick="location.reload()">Reintentar</button>
       </div>`;
     return;
   }
   loading = false; render();
-  setInterval(syncTick, 30 * 60 * 1000);   // respaldo/comparación cada 30 minutos
 })();
 </script>
 </body>
