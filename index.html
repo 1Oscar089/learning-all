@@ -16,6 +16,7 @@ document.documentElement.dataset.theme =
 <style>
 /* ═══════════ Base ═══════════ */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+[hidden]{display:none!important}
 [data-theme="light"]{
   --bg:#f4f1e9; --surface:#fdfbf5; --surface2:#eae5d8; --ink:#1d1a14;
   --muted:#7b7462; --line:#ddd6c3; --accent:#a34a1d; --shadow:0 14px 34px rgba(30,25,12,.10);
@@ -611,15 +612,17 @@ function setSyncing(on){
 async function backgroundCheck(){
   if(demoMode || checking) return;
   checking = true; setSyncing(true);
+  const safety = setTimeout(() => setSyncing(false), 45000); /* se apaga sola pase lo que pase */
   try{
     const r = await apiGet('action=rev');
     if(String(r.rev) === String(cacheRev)){
-      persistCache();                    // backup de respaldo
+      persistCache();
     }else{
       await fetchAll();
       render();
     }
-  }catch(_){ /* offline: manda la copia local */ }
+  }catch(_){ }
+  clearTimeout(safety);
   checking = false; setSyncing(false);
 }
 
