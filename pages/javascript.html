@@ -1,9 +1,11 @@
 <!DOCTYPE html>
 <!-- ═══════════════════════════════════════════════════════════════════
-     PLANTILLA DE TEMA — APRENDIZAJE INFINITO (v3 de la plantilla)
-     v3: fix crash "modeInfo undefined" → cargador de CodeMirror con
-     doble CDN + timeout + degradación total sin errores; guardas en
-     todos los addons; fix clic en cabecera (ahora sí abre el diálogo).
+     PLANTILLA DE TEMA — APRENDIZAJE INFINITO (v4)
+     v4: botones Fila/Columna ARRIBA · añadir/editar/crear instantáneo
+     (el POST va en segundo plano, NUNCA borra lo que escribes) ·
+     sync periódico eliminado · overlay de carga con icono y bloqueo ·
+     red de seguridad que conserva lo tecleado ante cualquier render.
+     REQUIERE backend v5 (row.add acepta rowId del cliente).
      AL DUPLICAR: cambia SOLO SHEET_NAME abajo. ══════════════════════ -->
 <html lang="es" data-theme="dark">
 <head>
@@ -18,8 +20,7 @@ document.documentElement.dataset.theme =
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..700;1,9..144,400..700&family=Space+Grotesk:wght@400..700&display=swap" rel="stylesheet">
-<!-- CodeMirror NO se carga aquí: lo carga bootCM() con doble CDN y
-     degradación total. Si no hay red/CDN, la página funciona igual. -->
+<!-- CodeMirror lo carga bootCM() con doble CDN y degradación total. -->
 
 <style>
 /* ═══════════ Base ═══════════ */
@@ -47,6 +48,30 @@ svg{display:block}
 .wrap{width:100%;max-width:1800px;margin-inline:auto;padding-inline:clamp(10px,1.8vw,22px)}
 main{flex:1;padding-block:8px 46px}
 .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+
+/* ═══════════ Overlay de carga (bloquea todo hasta estar listo) ═══════════ */
+#boot{
+  position:fixed;inset:0;z-index:200;background:var(--bg);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;
+  color:var(--muted);font-size:13px;letter-spacing:.05em;transition:opacity .3s;
+}
+#boot.off{opacity:0;pointer-events:none}
+#boot .boot-inf{width:96px;height:48px;color:var(--accent);overflow:visible}
+#boot .boot-inf path{
+  stroke:currentColor;stroke-width:9;stroke-linecap:round;fill:none;
+  stroke-dasharray:460 460;animation:bootdraw 1.5s linear infinite;
+}
+@keyframes bootdraw{to{stroke-dashoffset:-920}}
+
+/* ═══════════ Badge "Guardando…" (no bloqueante) ═══════════ */
+#saving{
+  position:fixed;right:16px;bottom:16px;z-index:150;
+  display:flex;align-items:center;gap:8px;
+  background:var(--ink);color:var(--bg);font-size:12.5px;
+  padding:8px 14px;border-radius:12px;box-shadow:var(--shadow);
+}
+#saving .mini-spin{width:14px;height:14px;animation:spin .9s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
 
 /* ═══════════ Cabecera ═══════════ */
 .top{
@@ -120,8 +145,11 @@ main{flex:1;padding-block:8px 46px}
 .t-theory.empty{color:var(--muted);opacity:.65;font-style:italic}
 .tb-stats{margin-left:auto;font-size:12px;color:var(--muted)}
 
-/* ═══════════ Tabla ═══════════ */
-.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin-top:14px;background:var(--surface)}
+/* Herramientas ARRIBA de la tabla */
+.tb-tools{display:flex;align-items:center;gap:8px;margin-top:14px;flex-wrap:wrap}
+.tb-tools .tb-stats{margin-left:auto}
+
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin-top:8px;background:var(--surface)}
 table{border-collapse:collapse;width:100%;min-width:560px;table-layout:fixed}
 thead th{
   position:relative;background:var(--surface2);font-weight:600;font-size:11.5px;
@@ -171,7 +199,6 @@ th:hover .col-grip::after{background:var(--line)}
 .op.save:hover{color:var(--accent)}
 .op.del:hover{color:#c04a35}
 .op svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-.tb-foot{display:flex;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap}
 .mini-btn{
   display:inline-flex;align-items:center;gap:6px;border:1px dashed var(--line);
   border-radius:9px;padding:6px 12px;font-size:12.5px;color:var(--muted);transition:all .15s;
@@ -209,7 +236,7 @@ tr.editing .CodeMirror{background:transparent}
 textarea.inline-input{min-height:92px;resize:vertical;line-height:1.6}
 .edit-hint{display:block;font-size:10.5px;color:var(--muted);margin-top:5px;pointer-events:none}
 
-/* ═══════════ Vacíos / carga ═══════════ */
+/* ═══════════ Vacíos / errores ═══════════ */
 .empty-tables{
   display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center;
   border:1px dashed var(--line);border-radius:18px;padding:9vh 20px;color:var(--muted);
@@ -220,8 +247,6 @@ textarea.inline-input{min-height:92px;resize:vertical;line-height:1.6}
   font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;
   background:var(--surface2);padding:2px 7px;border-radius:6px;color:var(--ink);
 }
-.skel{border-radius:18px;background:var(--surface2);animation:pulse 1.3s ease-in-out infinite}
-@keyframes pulse{50%{opacity:.45}}
 
 /* ═══════════ Diálogos ═══════════ */
 dialog{
@@ -281,6 +306,20 @@ input:focus,textarea:focus,select:focus{border-color:var(--accent)}
 </style>
 </head>
 <body>
+
+<!-- Overlay de carga: bloquea toda interacción hasta que haya datos -->
+<div id="boot">
+  <svg class="boot-inf" viewBox="0 0 200 100" aria-hidden="true">
+    <path d="M25,50 C25,20 75,20 100,50 C125,80 175,80 175,50 C175,20 125,20 100,50 C75,80 25,80 25,50 Z"/>
+  </svg>
+  <p>Cargando…</p>
+</div>
+
+<!-- Badge no bloqueante durante guardados en segundo plano -->
+<div id="saving" hidden>
+  <svg class="mini-spin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="40 18"/></svg>
+  <span>Guardando…</span>
+</div>
 
 <header class="top">
   <div class="top-in wrap">
@@ -363,7 +402,7 @@ input:focus,textarea:focus,select:focus{border-color:var(--accent)}
   </form>
 </dialog>
 
-<!-- ═══ Diálogo: editar columna (nombre + tipo + lenguaje) ═══ -->
+<!-- ═══ Diálogo: editar columna ═══ -->
 <dialog id="dlg-col">
   <div class="dlg-head">
     <h3>Columna</h3>
@@ -430,6 +469,9 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g,
   c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const pad = n => String(n).padStart(2,'0');
 const isDark = () => document.documentElement.dataset.theme === 'dark';
+/* Ids de fila generados EN EL CLIENTE → el backend v5 los respeta:
+   así añadir filas nunca requiere re-sincronizar ni re-renderizar. */
+const newRowId = () => 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 
 const ACC = {'á':'a','à':'a','ä':'a','â':'a','ã':'a','é':'e','è':'e','ë':'e','ê':'e',
   'í':'i','ì':'i','ï':'i','î':'i','ó':'o','ò':'o','ö':'o','ô':'o','õ':'o',
@@ -466,11 +508,7 @@ function renderIcon(raw){
   return `<span class="mod-icon">${ICON_FALLBACK}</span>`;
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   CARGADOR DE CODEMIRROR (doble CDN + timeout + degradación)
-   Nunca lanza: si todo falla, HAS_CM queda false y las celdas de
-   código se editan como texto monoespaciado. Sin errores en consola.
-   ═══════════════════════════════════════════════════════════════ */
+/* ═══════════ Cargador de CodeMirror (doble CDN, degradación total) ═══════════ */
 const CM_V = '5.65.16';
 const CM_BASES = [
   f => `https://cdnjs.cloudflare.com/ajax/libs/codemirror/${CM_V}/${f}`,
@@ -488,21 +526,16 @@ function loadScript(src, ms = 8000){
     document.head.appendChild(s);
   });
 }
-function loadCSS(href){
-  const l = document.createElement('link');
-  l.rel = 'stylesheet'; l.href = href;
-  document.head.appendChild(l);
-}
 async function bootCM(){
-  /* CSS: sin bloquear (si falta un tema, quedan colores por defecto) */
   ['codemirror.min.css','theme/material-darker.min.css','addon/hint/show-hint.min.css']
     .forEach(f => {
       const a = document.createElement('link');
       a.rel = 'stylesheet'; a.href = CM_BASES[0](f);
-      a.onerror = () => { a.remove(); loadCSS(CM_BASES[1](f)); };
+      a.onerror = () => { a.remove();
+        const b = document.createElement('link'); b.rel='stylesheet'; b.href = CM_BASES[1](f);
+        document.head.appendChild(b); };
       document.head.appendChild(a);
     });
-  /* JS: secuencial y con fallback por archivo */
   const files = ['codemirror.min.js','addon/runmode/runmode.min.js','addon/mode/meta.min.js',
                  'addon/hint/show-hint.min.js','addon/hint/anyword-hint.min.js',
                  'addon/edit/matchbrackets.min.js','addon/edit/closebrackets.min.js'];
@@ -511,9 +544,9 @@ async function bootCM(){
     let ok = false;
     for(let i = 0; i < CM_BASES.length; i++){
       try{ await loadScript(CM_BASES[i](f)); ok = true; lastOk = i; break; }
-      catch(_){ /* siguiente CDN */ }
+      catch(_){ }
     }
-    if(!ok) return false;                       // sin CodeMirror → degradación
+    if(!ok) return false;
     if(f === 'codemirror.min.js')
       CodeMirror.modeURL = CM_BASES[lastOk]('mode/%N/%N.min.js');
   }
@@ -521,7 +554,6 @@ async function bootCM(){
 }
 const cmReady = bootCM();
 
-/* Respaldo de lenguajes si el addon meta no llegara a cargar */
 const FALLBACK_LANGS = ['Python','JavaScript','TypeScript','HTML','XML','CSS','SCSS','JSON','SQL',
   'Java','C','C++','C#','Go','Rust','PHP','Ruby','Swift','Kotlin','Dart','Shell','Bash','PowerShell',
   'YAML','TOML','Markdown','R','MATLAB','Lua','Perl','Scala','Haskell','Elixir','Dockerfile','Nginx'];
@@ -555,7 +587,7 @@ function cmModeOf(lang){
 }
 const CM_THEME = () => isDark() ? 'material-darker' : 'default';
 
-/* ─────────── Estado, caché y anchos guardados ─────────── */
+/* ─────────── Estado, caché y anchos ─────────── */
 let state = { module: null, tables: [] };
 let cacheRev = null;
 let loading = true;
@@ -574,7 +606,6 @@ function writeCache(data, rev){
 }
 function persistCache(){ if(cacheRev != null) writeCache(state, cacheRev); }
 
-/* Cabeceras antiguas (strings) → objetos {name,type,lang} */
 function normalizeTables(tables){
   (tables || []).forEach(t => {
     t.headers = (t.headers || []).map(h =>
@@ -603,18 +634,7 @@ async function apiPost(action, payload){
   return r.json();
 }
 
-async function loadTheme(){
-  const cached = readCache();
-  if(cached && cached.data){
-    try{
-      const r = await apiGet('action=rev');
-      if(String(r.rev) === String(cached.rev)){
-        state = cached.data; normalizeTables(state.tables); cacheRev = cached.rev; return;
-      }
-    }catch(_){
-      state = cached.data; normalizeTables(state.tables); cacheRev = cached.rev; return;
-    }
-  }
+async function fetchTheme(){
   const r = await apiGet('action=theme&sheet=' + encodeURIComponent(SHEET_NAME));
   if(!r.ok) throw new Error(r.error || 'Error al cargar el tema');
   state = { module: r.module || null, tables: normalizeTables(r.tables || []) };
@@ -622,45 +642,102 @@ async function loadTheme(){
   persistCache();
 }
 
-async function refreshTheme(){
-  if(demoMode) return;
-  try{
-    const r = await apiGet('action=theme&sheet=' + encodeURIComponent(SHEET_NAME));
-    if(r.ok){
-      state = { module: r.module || null, tables: normalizeTables(r.tables || []) };
-      cacheRev = String(r.rev);
-      persistCache(); render();
-    }
-  }catch(_){ }
+/* Badge "Guardando…" — solo informativo, NUNCA bloquea la edición */
+let savingCount = 0;
+function setSaving(on){
+  savingCount = Math.max(0, savingCount + (on ? 1 : -1));
+  $('#saving').hidden = savingCount === 0;
 }
 
-async function syncTick(){
-  if(demoMode || loading) return;
-  try{
-    const r = await apiGet('action=rev');
-    if(String(r.rev) !== String(cacheRev)) await refreshTheme();
-    else persistCache();
-  }catch(_){}
+/* Overlay de carga: se oculta en el primer render */
+let booted = false;
+function hideBoot(){
+  if(booted) return; booted = true;
+  const b = document.getElementById('boot');
+  if(b){ b.classList.add('off'); setTimeout(() => b.remove(), 350); }
 }
 
+/* ─────────── Mutaciones: aplicar local → render → POST en background.
+   SIN re-render posterior y SIN revertir: lo que escribes jamás se
+   borra. Si el POST falla, solo se avisa con toast. ─────────── */
 async function mutate(action, payload, { apply=null, onOk=null, msg='Guardado' } = {}){
-  const snap = JSON.stringify(state);
   if(apply) apply();
   render();
   if(demoMode){ toast('Modo demostración: el cambio no se guarda', 'warn'); return true; }
+  setSaving(true);
   try{
     const r = await apiPost(action, Object.assign({ sheet: SHEET_NAME }, payload));
     if(!r.ok) throw new Error(r.error || 'Error del servidor');
     cacheRev = String(r.rev);
-    if(onOk) await onOk(r);
-    persistCache(); render();
-    toast(msg, 'ok');
+    persistCache();
+    if(onOk){ try{ onOk(r); }catch(_){ } }
+    setSaving(false);
+    if(msg) toast(msg, 'ok');
+    maybePendingSync();
     return true;
   }catch(err){
-    state = JSON.parse(snap); render();
+    setSaving(false);
     toast('No se pudo guardar: ' + (err.message || 'error de red'), 'err');
     return false;
   }
+}
+
+/* Añadir fila: instantáneo + POST en background (id generado aquí) */
+function addRow(tid){
+  const t = getTable(tid); if(!t) return;
+  const rid = newRowId();
+  const row = { id: rid, values: Array(t.headers.length).fill(''), locked: false };
+  t.rows.push(row);
+  render();
+  requestAnimationFrame(() => {
+    const tr = document.querySelector(`#content tr[data-rid="${CSS.escape(rid)}"]`);
+    const inp = tr && tr.querySelector('textarea.cell-input');
+    if(inp){ inp.focus(); inp.scrollIntoView({ block:'nearest' }); }
+  });
+  if(demoMode) return;
+  setSaving(true);
+  apiPost('row.add', { sheet: SHEET_NAME, tableId: tid, rowId: rid, values: row.values })
+    .then(r => {
+      if(!r.ok) throw new Error(r.error || 'Error del servidor');
+      cacheRev = String(r.rev); persistCache();
+      setSaving(false); toast('Fila añadida', 'ok'); maybePendingSync();
+    })
+    .catch(err => {
+      setSaving(false);
+      toast('La fila no se pudo crear en la hoja: ' + (err.message || 'red'), 'err');
+    });
+}
+
+/* ─────────── Sincronización: SOLO una comprobación tras abrir.
+   Si estás escribiendo se pospone y se reintentará después de tu
+   próximo guardado. NO hay intervalos periódicos. ─────────── */
+let pendingSync = false;
+function isEditing(){
+  const ae = document.activeElement;
+  return !!(ae && $('#content').contains(ae) &&
+    (ae.tagName === 'TEXTAREA' || ae.tagName === 'INPUT' || ae.classList.contains('CodeMirror')));
+}
+function maybePendingSync(){
+  if(!pendingSync) return;
+  pendingSync = false;
+  setTimeout(backgroundCheck, 1500);
+}
+async function backgroundCheck(){
+  if(demoMode) return;
+  try{
+    const r = await apiGet('action=rev');
+    if(String(r.rev) === String(cacheRev)){ persistCache(); return; }
+    if(isEditing() || savingCount > 0){ pendingSync = true; return; }   // nunca interrumpir
+    const all = await apiGet('action=theme&sheet=' + encodeURIComponent(SHEET_NAME));
+    if(all.ok && !isEditing() && savingCount === 0){
+      state = { module: all.module || null, tables: normalizeTables(all.tables || []) };
+      cacheRev = String(all.rev);
+      persistCache(); render();
+      toast('Sincronizado con la hoja', 'ok');
+    }else{
+      pendingSync = true;
+    }
+  }catch(_){ }
 }
 
 /* ─────────── Derivados ─────────── */
@@ -669,13 +746,54 @@ const byTitle = (a,b) => String(a.titulo).localeCompare(String(b.titulo),'es',{s
 const sortedRows = t => [...t.rows].sort((a,b) =>
   String(a.values[0]||'').trim().localeCompare(String(b.values[0]||'').trim(),'es',{sensitivity:'base'}));
 
+/* ─────────── Red de seguridad: conserva lo tecleado en renders ─────────── */
+const skipRestore = new Set();
+function captureEdits(){
+  const cap = { rows:{}, focus:null };
+  const ae = document.activeElement;
+  if(ae){
+    const tr = ae.closest && ae.closest('#content tr.editing');
+    const td = ae.closest && ae.closest('td[data-td]');
+    if(tr && td) cap.focus = { rid: tr.dataset.rid, cell: td.dataset.td };
+  }
+  $$('#content tr.editing').forEach(tr => {
+    if(skipRestore.has(tr.dataset.rid)) return;    // Esc = descartar a propósito
+    cap.rows[tr.dataset.rid] = [...tr.querySelectorAll('textarea')].map(t => t.value);
+  });
+  skipRestore.clear();
+  return cap;
+}
+function restoreEdits(cap){
+  if(!cap) return;
+  for(const [rid, vals] of Object.entries(cap.rows)){
+    const tr = document.querySelector(`#content tr[data-rid="${CSS.escape(rid)}"]`);
+    if(!tr || !tr.classList.contains('editing')) continue;
+    tr.querySelectorAll('textarea').forEach(t => {
+      const v = vals[+t.dataset.cell];
+      if(v != null) t.value = v;
+    });
+    tr.querySelectorAll('textarea.cell-input').forEach(autoGrow);
+  }
+  if(cap.focus){
+    const tr = document.querySelector(`#content tr[data-rid="${CSS.escape(cap.focus.rid)}"]`);
+    const td = tr && tr.querySelector(`td[data-td="${CSS.escape(cap.focus.cell)}"]`);
+    if(td){
+      const ta = td.querySelector('textarea');
+      if(ta && !ta.hidden){ ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+    }
+  }
+}
+
 /* ─────────── Render ─────────── */
 function render(){
-  if(loading){ renderSkeleton(); return; }
+  if(loading) return;                    // el overlay #boot sigue tapando
+  const cap = captureEdits();
   renderHero();
   renderTables();
+  restoreEdits(cap);
   mountEditors();
   highlightCodeViews();
+  hideBoot();
 }
 
 function renderHero(){
@@ -750,6 +868,15 @@ function blockHTML(t, i){
     ${t.texto
       ? `<p class="t-theory" data-tid="${esc(t.tableId)}" title="Clic para editar">${esc(t.texto)}</p>`
       : `<p class="t-theory empty" data-tid="${esc(t.tableId)}" title="Clic para añadir">+ Añadir teoría o descripción…</p>`}
+    <div class="tb-tools">
+      <button class="mini-btn" data-act="add-row" title="Añadir fila arriba, editable al instante">
+        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Fila
+      </button>
+      <button class="mini-btn" data-act="add-col">
+        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Columna
+      </button>
+      <span class="tb-stats">${t.rows.length} ${t.rows.length === 1 ? 'fila' : 'filas'} · ${t.headers.length} columnas</span>
+    </div>
     <div class="tbl-wrap">
       <table>
         <colgroup>${cols}</colgroup>
@@ -770,15 +897,6 @@ function blockHTML(t, i){
           ${sortedRows(t).map(r => rowHTML(t, r)).join('')}
         </tbody>
       </table>
-    </div>
-    <div class="tb-foot">
-      <button class="mini-btn" data-act="add-row">
-        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Fila
-      </button>
-      <button class="mini-btn" data-act="add-col">
-        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Columna
-      </button>
-      <span class="tb-stats">${t.rows.length} ${t.rows.length === 1 ? 'fila' : 'filas'} · ${t.headers.length} columnas</span>
     </div>
   </section>`;
 }
@@ -809,7 +927,7 @@ function rowHTML(t, row){
         ? `<button class="op save" data-act="save-row" title="Guardar fila (Ctrl+Enter)" aria-label="Guardar fila">
              <svg viewBox="0 0 24 24"><path d="m4 12 5 5L20 7"/></svg>
            </button>`
-        : `<button class="op" data-act="edit-row" data-rid="${esc(row.id)}" title="Editar fila" aria-label="Editar fila">
+        : `<button class="op" data-act="edit-row" data-rid="${esc(row.id)}" title="Editar fila (instantáneo)" aria-label="Editar fila">
              <svg viewBox="0 0 24 24"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
            </button>
            <button class="op del" data-act="del-row" data-rid="${esc(row.id)}" title="Eliminar fila" aria-label="Eliminar fila">
@@ -819,12 +937,11 @@ function rowHTML(t, row){
   </tr>`;
 }
 
-/* Monta editores tras cada render (con guardas por si falta un addon) */
+/* ─────────── Editores CodeMirror / textareas ─────────── */
 function autoGrow(ta){ ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; }
 function mountEditors(){
   $$('#content tr.editing .cell-input').forEach(autoGrow);
   if(!HAS_CM){
-    /* Degradación: las celdas de código se editan como textarea mono */
     $$('#content .code-editor').forEach(ta => {
       ta.hidden = false;
       ta.className = 'cell-input mono';
@@ -847,11 +964,14 @@ function mountEditors(){
           'Cmd-Space':  cm2 => { if(CodeMirror.commands.autocomplete) cm2.execCommand('autocomplete'); },
           'Ctrl-Enter': cm2 => saveRowFromTr(cm2.getWrapperElement().closest('tr')),
           'Cmd-Enter':  cm2 => saveRowFromTr(cm2.getWrapperElement().closest('tr')),
-          'Esc': () => render()
+          'Esc': cm2 => {
+            const tr = cm2.getWrapperElement().closest('tr');
+            if(tr) skipRestore.add(tr.dataset.rid);   // Esc descarta
+            render();
+          }
         }
       });
       cm.setSize('100%', 'auto');
-      /* Autocompletado suave mientras se escribe (si el addon existe) */
       cm.on('inputRead', (inst, ch) => {
         if(!ch.text || !ch.text[0] || !/[\w$]/.test(ch.text[0])) return;
         if(inst.state.completionActive) return;
@@ -862,7 +982,6 @@ function mountEditors(){
   });
 }
 
-/* Resaltado de código en modo lectura (si runmode existe) */
 function highlightCodeViews(){
   if(!HAS_CM || typeof CodeMirror.runMode !== 'function') return;
   $$('#content .codeview[data-lang]').forEach(pre => {
@@ -874,14 +993,7 @@ function highlightCodeViews(){
   });
 }
 
-function renderSkeleton(){
-  $('#hero').innerHTML = `<div class="skel" style="height:120px"></div>`;
-  $('#content').innerHTML = `
-    <div class="skel" style="height:280px;margin-top:22px"></div>
-    <div class="skel" style="height:280px;margin-top:22px"></div>`;
-}
-
-/* ─────────── Guardar fila (lee textareas y CodeMirror) ─────────── */
+/* ─────────── Guardar fila (POST en background, sin interrupciones) ─────────── */
 async function saveRowFromTr(tr){
   if(!tr) return;
   const tid = tr.closest('.tblock')?.dataset.table;
@@ -954,7 +1066,7 @@ function startTextoEdit(tid, host){
   ta.addEventListener('blur', commit);
 }
 
-/* ─────────── Diálogo de columna (nombre + tipo + lenguaje) ─────────── */
+/* ─────────── Diálogo de columna ─────────── */
 const dlgCol = $('#dlg-col');
 let colEdit = null;
 function openColDialog(tid, j){
@@ -991,8 +1103,7 @@ function openColDialog(tid, j){
     lang = '';
   }
   const nh = t.headers.map((h,i) => i === colEdit.j ? { name, type, lang } : h);
-  const tid = colEdit.tid;
-  mutate('table.meta', { tableId: tid, headers: nh },
+  mutate('table.meta', { tableId: colEdit.tid, headers: nh },
     { apply(){ t.headers = nh; }, msg: 'Columna actualizada' });
   dlgCol.close(); colEdit = null;
 };
@@ -1035,27 +1146,42 @@ function openTableDialog(){
   const headers = [...hGrid.querySelectorAll('.h-input')]
     .map((i,idx) => ({ name: i.value.trim() || ('Columna ' + (idx + 1)), type: 'text', lang: '' }));
   const nr = Math.max(0, Math.min(50, parseInt(fRows.value) || 0));
-  const rows = Array.from({ length: nr }, () => Array(headers.length).fill(''));
+  /* Filas con id del CLIENTE: el backend v5 los respeta → no hay
+     re-sincronización ni re-render al crear. Nacen editables. */
+  const newRows = Array.from({ length: nr }, () =>
+    ({ rowId: newRowId(), values: Array(headers.length).fill('') }));
   const tmp = 'tmp_' + Date.now().toString(36);
-  let createdId = null;
-  const ok = await mutate('table.create', { titulo, texto, headers, rows }, {
-    apply(){
-      state.tables.push({
-        tableId: tmp, titulo, texto, headers,
-        rows: rows.map(v => ({ id: 'tmpr' + Math.random().toString(36).slice(2), values: v, locked: false }))
-      });
-    },
-    onOk: async r => { createdId = r.tableId; await refreshTheme(); },
-    msg: 'Tabla creada'
-  });
+  const ok = await mutate('table.create',
+    { titulo, texto, headers, rows: newRows }, {
+      apply(){
+        state.tables.push({
+          tableId: tmp, titulo, texto, headers,
+          rows: newRows.map(r => ({ id: r.rowId, values: r.values.slice(), locked: false }))
+        });
+      },
+      onOk(r){ remapTableId(tmp, r.tableId); },
+      msg: 'Tabla creada'
+    });
   if(ok){
     dlgTable.close();
-    if(createdId) setTimeout(() => {
-      document.querySelector(`[data-table="${CSS.escape(createdId)}"]`)
-        ?.scrollIntoView({ behavior:'smooth', block:'start' });
+    setTimeout(() => {
+      const sec = document.querySelector(`#content .tblock[data-table="${CSS.escape(r2id(tmp))}"]`);
+      sec?.scrollIntoView({ behavior:'smooth', block:'start' });
     }, 80);
   }
 });
+/* helper: tras el remap el id real reemplaza al tmp en el DOM */
+function r2id(tmp){ return state.tables.find(t => t.tableId === tmp) ? tmp : tmp; }
+
+function remapTableId(oldId, newId){
+  const t = state.tables.find(x => x.tableId === oldId);
+  if(!t || oldId === newId) return;
+  t.tableId = newId;
+  const sec = document.querySelector(`#content .tblock[data-table="${CSS.escape(oldId)}"]`);
+  if(sec) sec.dataset.table = newId;
+  if(widths[oldId]){ widths[newId] = widths[oldId]; delete widths[oldId]; saveWidths(); }
+  persistCache();
+}
 
 /* ─────────── Confirmación ─────────── */
 function confirmDialog(title, body, okLabel = 'Eliminar'){
@@ -1085,7 +1211,7 @@ function toast(msg, tone = 'ok'){
 }
 
 /* ─────────── Interacción: clics ─────────── */
-let gripDrag = false;   /* evita que arrastrar el ancho abra el diálogo */
+let gripDrag = false;
 
  $('#content').addEventListener('click', async e => {
   const actEl = e.target.closest('[data-act]');
@@ -1096,11 +1222,7 @@ let gripDrag = false;   /* evita que arrastrar el ancho abra el diálogo */
     const act = actEl.dataset.act;
 
     if(act === 'add-row' && t){
-      mutate('row.add',
-        { tableId: tid, values: Array(t.headers.length).fill('') },
-        { apply(){ t.rows.push({ id:'tmpR'+Date.now().toString(36), values: Array(t.headers.length).fill(''), locked:false }); },
-          onOk: async () => { await refreshTheme(); },
-          msg: 'Fila añadida' });
+      addRow(tid);                                  // instantáneo, botón arriba
     }
     else if(act === 'add-col' && t){
       mutate('col.add',
@@ -1115,10 +1237,16 @@ let gripDrag = false;   /* evita que arrastrar el ancho abra el diálogo */
     else if(act === 'save-row' && t){
       saveRowFromTr(actEl.closest('tr'));
     }
+    /* Editar = instantáneo y 100% local: sin POST, sin espera.
+       El bloqueo real se envía al guardar la fila. */
     else if(act === 'edit-row' && t){
       const row = t.rows.find(x => x.id === actEl.dataset.rid); if(!row) return;
-      mutate('row.update', { tableId: tid, rowId: row.id, locked: false },
-        { apply(){ row.locked = false; }, msg: 'Fila en edición' });
+      row.locked = false;
+      render();
+      requestAnimationFrame(() => {
+        const tr = document.querySelector(`#content tr[data-rid="${CSS.escape(row.id)}"]`);
+        tr?.querySelector('textarea.cell-input')?.focus();
+      });
     }
     else if(act === 'del-row' && t){
       const row = t.rows.find(x => x.id === actEl.dataset.rid); if(!row) return;
@@ -1156,9 +1284,6 @@ let gripDrag = false;   /* evita que arrastrar el ancho abra el diálogo */
     return;
   }
 
-  /* FIX: clic directo sobre el th abre el diálogo de columna.
-     (Antes se escuchaba .h-label, que tiene pointer-events:none y
-     nunca recibía el clic — el diálogo no se abría jamás.) */
   const th = e.target.closest('thead th');
   if(th && !th.classList.contains('ops') && !gripDrag &&
      !e.target.closest('.col-x') && !e.target.closest('.col-grip')){
@@ -1173,13 +1298,15 @@ let gripDrag = false;   /* evita que arrastrar el ancho abra el diálogo */
   if(tx){ startTextoEdit(tx.dataset.tid, tx); return; }
 });
 
-/* ─────────── Interacción: teclado y auto-altura ─────────── */
+/* ─────────── Teclado y auto-altura ─────────── */
  $('#content').addEventListener('keydown', e => {
   const el = e.target;
   if(el.classList?.contains('cell-input')){
     if((e.ctrlKey || e.metaKey) && e.key === 'Enter'){
       e.preventDefault(); saveRowFromTr(el.closest('tr'));
     }else if(e.key === 'Escape'){
+      const tr = el.closest('tr');
+      if(tr) skipRestore.add(tr.dataset.rid);       // Esc descarta lo tecleado
       render();
     }
   }
@@ -1188,7 +1315,7 @@ let gripDrag = false;   /* evita que arrastrar el ancho abra el diálogo */
   if(e.target.classList?.contains('cell-input')) autoGrow(e.target);
 });
 
-/* ─────────── Anchos de columna: arrastrar para ajustar ─────────── */
+/* ─────────── Anchos de columna ─────────── */
  $('#content').addEventListener('pointerdown', e => {
   const grip = e.target.closest('.col-grip');
   if(!grip || e.button !== 0) return;
@@ -1229,7 +1356,7 @@ let gripDrag = false;   /* evita que arrastrar el ancho abra el diálogo */
   const next = isDark() ? 'light' : 'dark';
   document.documentElement.dataset.theme = next;
   localStorage.setItem('ai_theme', next);
-  render();   /* re-pinta codeviews/editores con el tema correcto */
+  render();
 };
  $$('[data-close]').forEach(b => b.onclick = () => $('#' + b.dataset.close).close());
 
@@ -1258,6 +1385,7 @@ const DEMO_TABLES = [
 /* ─────────── Pantallas de error ─────────── */
 function screenError(title, bodyHtml){
   loading = false;
+  hideBoot();
   $('#hero').innerHTML = '';
   $('#content').innerHTML = `
     <div class="empty-tables" style="border-style:solid">
@@ -1270,10 +1398,14 @@ function screenError(title, bodyHtml){
     </div>`;
 }
 
-/* ─────────── Arranque ─────────── */
+/* ─────────── Arranque ───────────
+   1. Con caché local: render INMEDIATO y verificación de fondo
+      (pospuesta si estás escribiendo).
+   2. Sin caché: el overlay de carga cubre todo hasta que lleguen
+      los datos — nada es editable hasta entonces.               */
 (async function init(){
-  renderSkeleton();
-  HAS_CM = await cmReady;   /* true/false — nunca lanza */
+  renderSkeletonless();
+  HAS_CM = await cmReady;
   populateLangList();
   if(demoMode){
     state = {
@@ -1284,8 +1416,17 @@ function screenError(title, bodyHtml){
     loading = false; render();
     return;
   }
+  const cached = readCache();
+  if(cached && cached.data){
+    state = cached.data; normalizeTables(state.tables);
+    cacheRev = String(cached.rev ?? '');
+    loading = false; render();          // contenido al instante
+    backgroundCheck();                  // una sola verificación en fondo
+    return;
+  }
   try{
-    await loadTheme();
+    await fetchTheme();
+    loading = false; render();
   }catch(err){
     const msg = String(err.message || '');
     if(/Ningún tema del Index usa la hoja/i.test(msg) || /No existe la hoja/i.test(msg)){
@@ -1297,11 +1438,13 @@ function screenError(title, bodyHtml){
       return;
     }
     screenError('No se pudo cargar el tema', `<p>${esc(msg || 'Error de red')}</p>`);
-    return;
   }
-  loading = false; render();
-  setInterval(syncTick, 30 * 60 * 1000);
 })();
+
+function renderSkeletonless(){
+  $('#hero').innerHTML = '';
+  $('#content').innerHTML = '';
+}
 </script>
 </body>
 </html>
