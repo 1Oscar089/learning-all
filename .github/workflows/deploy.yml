@@ -1,0 +1,44 @@
+name: Deploy a GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@v4
+
+      # Genera config.js con el secret API_URL (la URL /exec del Apps Script).
+      # config.js NO está en el repositorio (.gitignore): solo existe aquí.
+      - name: Crear config.js con el secret API_URL
+        env:
+          API_URL: ${{ secrets.API_URL }}
+        run: printf 'window.AI_CONFIG = { API_URL: "%s" };\n' "$API_URL" > config.js
+
+      - name: Configurar GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Publicar el sitio
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - name: Desplegar
+        id: deployment
+        uses: actions/deploy-pages@v4
